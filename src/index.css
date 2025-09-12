@@ -1,0 +1,11 @@
+/* Import Google Fonts Outfit */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap');
+
+@import "tailwindcss";
+
+/* Apply Outfit font globally */
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: #18181b;
+  color: #3b82f6;
+}
