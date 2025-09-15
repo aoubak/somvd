@@ -1,12 +1,43 @@
-# React + Vite
+## SOMVD – Social Media Video Downloader (Frontend)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the React + Vite frontend for SOMVD. It provides a simple UI to paste a social media URL, preview metadata, select quality, and download via the backend streaming API.
 
-Currently, two official plugins are available:
+### Features
+- Paste URL (YouTube, TikTok, Instagram, Facebook, Twitter)
+- Detect platform and show available formats
+- Download via streaming (no server storage)
+- Nice UI with status messages and progress states
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Prerequisites
+- Node.js 18+
+- Backend running (see `backend/README.md`)
 
-## Expanding the ESLint configuration
+### Environment
+Create a `.env` file at the project root (frontend) if needed:
+```
+VITE_API_URL=http://localhost:3002/api
+```
+Defaults to `http://localhost:3002/api` if not set.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Run locally
+```bash
+npm install
+npm run dev
+# open the URL shown (e.g., http://localhost:5173)
+```
+
+### How downloads work
+- The frontend calls `POST /api/video/info` to fetch metadata.
+- On Download, it opens `GET /api/video/stream?url=...&quality=...` which streams bytes directly to the browser with a proper filename. No files are stored on the server.
+
+### Notes for Facebook
+- Some Facebook links require login. The backend supports cookies via `YTDLP_COOKIES` (see backend README).
+- For watch and reels/share links, try `quality=best` for best compatibility.
+
+### Troubleshooting
+- If downloads start a new tab but don’t save, ensure popups are allowed and check console for `🔗 Download URL` logs.
+- If backend errors occur, see the backend logs.
+
+### Related docs
+- Backend: `backend/README.md`
+- Future roadmap: `FUTURE.md`
