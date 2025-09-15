@@ -109,6 +109,19 @@ Content-Type: application/json
 }
 ```
 
+### Stream Video (no disk)
+```http
+GET /api/video/stream?url={sourceUrl}&quality={360p|480p|720p|1080p|best}
+```
+- Streams directly to the client. Prefers progressive A+V; falls back to FFmpeg merge if available.
+- Headers: Content-Type, Content-Disposition, Accept-Ranges (when origin supports).
+- Errors: 400/404/422/429/5xx with JSON body.
+
+Cookies for private Facebook:
+```
+YTDLP_COOKIES=C:\path\to\cookies.txt
+```
+
 ### Get Supported Platforms
 ```http
 GET /api/video/platforms

@@ -321,13 +321,19 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
     }
 
     // Resolve media info via yt-dlp (no download)
-    const ytdlp = spawn('python', [
+    const cookiesPath = process.env.YTDLP_COOKIES || process.env.COOKIES_FILE;
+    const ytdlpArgs = [
       '-m', 'yt_dlp',
       '--dump-json',
       '--no-download',
-      '--no-warnings',
-      url
-    ]);
+      '--no-warnings'
+    ];
+    if (cookiesPath) {
+      ytdlpArgs.push('--cookies', cookiesPath);
+    }
+    ytdlpArgs.push(url);
+
+    const ytdlp = spawn('python', ytdlpArgs);
 
     let stdout = '';
     let stderr = '';
@@ -418,6 +424,7 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
               '--no-warnings',
               '--merge-output-format', 'mp4',
               ...(process.env.FFMPEG_PATH ? ['--ffmpeg-location', process.env.FFMPEG_PATH] : []),
+              ...(cookiesPath ? ['--cookies', cookiesPath] : []),
               '-o', '-',
               url
             ];
@@ -452,7 +459,8 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
             ytdlpMerge.on('close', (code) => {
               if (code !== 0) {
                 if (!res.headersSent) {
-                  return res.status(502).json({ error: 'Merge failed', message: 'yt-dlp/ffmpeg exited with error' });
+                  const msg = 'yt-dlp/ffmpeg exited with error' + (cookiesPath ? ' (check cookies file path and validity)' : '');
+                  return res.status(502).json({ error: 'Merge failed', message: msg });
                 }
               }
               res.end();
