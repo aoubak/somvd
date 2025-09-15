@@ -85,11 +85,9 @@ export default function VideoDownloader() {
 
     setIsDownloading(true);
     try {
-      const result = await videoDownloadService.downloadVideo(videoInfo, format);
-      setDownloadStatus({
-        type: 'success',
-        message: `Download completed! File: ${result.filename}`
-      });
+      // Use streaming endpoint (no disk) by default
+      await videoDownloadService.streamVideo(videoInfo, format);
+      setDownloadStatus({ type: 'success', message: 'Streaming download started...' });
     } catch (error) {
       setDownloadStatus({
         type: 'error',

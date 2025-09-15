@@ -35,6 +35,9 @@ class VideoProcessor {
         patterns: [
           /(?:facebook\.com\/.*\/videos\/|fb\.watch\/)(\d+)/,
           /facebook\.com\/watch\/\?v=(\d+)/,
+          /(?:facebook\.com|m\.facebook\.com)\/reel\/([A-Za-z0-9._-]+)/,
+          /(?:facebook\.com|m\.facebook\.com)\/reels\/([A-Za-z0-9._-]+)/,
+          /(?:facebook\.com|m\.facebook\.com)\/share\/r\/([A-Za-z0-9._-]+)/,
           /facebook\.com\/share\/v\/([A-Za-z0-9._-]+)/
         ],
         icon: '👥'

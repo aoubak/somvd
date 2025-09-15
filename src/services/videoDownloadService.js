@@ -132,6 +132,28 @@ class VideoDownloadService {
     }
   }
 
+  // Stream video directly (no disk) via backend streaming endpoint
+  async streamVideo(videoInfo, formatId) {
+    try {
+      // Derive quality from formatId like "mp4_720p"
+      let quality = 'best';
+      if (typeof formatId === 'string') {
+        const m = formatId.match(/_(\d+p)$/i);
+        if (m && m[1]) quality = m[1].toLowerCase();
+      }
+
+      // Build stream URL
+      const streamUrl = `${this.baseURL}/video/stream?url=${encodeURIComponent(videoInfo.originalUrl)}&quality=${encodeURIComponent(quality)}`;
+
+      // Trigger browser download; filename will be set by Content-Disposition
+      this.triggerDownload(streamUrl, `${videoInfo.title || 'video'}.mp4`);
+
+      return { success: true };
+    } catch (error) {
+      throw new Error('Unable to start streaming download.');
+    }
+  }
+
   // Generate mock data helpers
   generateMockTitle(platform) {
     const titles = {

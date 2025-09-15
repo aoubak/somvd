@@ -49,9 +49,20 @@ const downloadLimiter = rateLimit({
   }
 });
 
+// Streaming-specific rate limiter (more conservative to protect bandwidth)
+const streamLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 6, // up to 6 stream starts per minute
+  message: {
+    error: 'Too many streaming requests, please wait before trying again.',
+    retryAfter: '1 minute'
+  }
+});
+
 // Apply rate limiting
 app.use(limiter);
 app.use('/api/video/download', downloadLimiter);
+app.use('/api/video/stream', streamLimiter);
 
 // Middleware
 app.use(compression());
