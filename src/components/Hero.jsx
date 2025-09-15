@@ -1,40 +1,38 @@
 import React from 'react'
+import VideoDownloader from './VideoDownloader'
 
-export default function hero() {
+export default function Hero() {
   return (
      <section className="bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 pt-12 pb-20 px-4 md:px-0">
-      <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-10">
-        {/* Text Content */}
-        <div className="flex-1">
-          <h1 className="text-4xl text-center md:text-5xl font-bold text-white mb-6 leading-tight">
-            Download Videos Instantly <br />
-            <span className="text-blue-500">From Anywhere</span>
-          </h1>
-          <p className="text-lg md:text-xl text-center  text-gray-300 mb-8">
-            SOMVD makes it easy to save your favorite videos from any platform. Fast, secure, and free.
-          </p>
-          <form className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="url"
-              placeholder="Paste video URL here..."
-              className="flex-1 px-4 py-3 rounded-lg bg-gray-800 text-white border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="submit"
-              className="bg-blue-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-600 transition border border-blue-500"
-            >
-              Download
-            </button>
-          </form>
+      <div className="max-w-4xl mx-auto text-center mb-10">
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+          Download Videos Instantly <br />
+          <span className="text-blue-500">From Anywhere</span>
+        </h1>
+        <p className="text-lg md:text-xl text-gray-300 mb-8">
+          SOMVD makes it easy to save your favorite videos from any platform. Fast, secure, and free.
+        </p>
+      </div>
+      
+      <VideoDownloader />
+      
+      {/* Features Preview */}
+      <div className="max-w-4xl mx-auto mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="text-3xl mb-3">⚡</div>
+          <h3 className="text-white font-semibold mb-2">Lightning Fast</h3>
+          <p className="text-gray-400 text-sm">Download videos in seconds with our optimized servers</p>
         </div>
-        {/* Illustration */}
-        {/* <div className="flex-1 flex justify-center">
-          <img
-            src="https://undraw.co/api/illustrations/undraw_video_files_fu10?color=3b82f6"
-            alt="Video Download"
-            className="w-72 md:w-96"
-          />
-        </div> */}
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="text-3xl mb-3">🔒</div>
+          <h3 className="text-white font-semibold mb-2">100% Secure</h3>
+          <p className="text-gray-400 text-sm">Your privacy is protected. No data stored or shared</p>
+        </div>
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+          <div className="text-3xl mb-3">🆓</div>
+          <h3 className="text-white font-semibold mb-2">Completely Free</h3>
+          <p className="text-gray-400 text-sm">No hidden fees, no ads, no registration required</p>
+        </div>
       </div>
     </section>
   )

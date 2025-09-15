@@ -3,42 +3,49 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 export default function Header() {
-    const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="fixed w-full top-0 left-0 bg-gray-900/45 shadow-gray-600 shadow backdrop-blur-2xl text-white font-outfit">
+    <header className="fixed z-50  w-full top-0 left-0 bg-gray-900/45 shadow-gray-600 shadow backdrop-blur-2xl text-white font-outfit">
       <nav className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
         {/* Logo */}
         <Link to="/" className="text-white text-2xl font-bold">SOMVD</Link>
 
         {/* Desktop Links */}
-        <ul className="hidden md:flex space-x-8 items-center">
-            <li>
-                <Link to="/features" className="hover:text-gray-300 transition">
-                    Features
-                </Link>
-            </li>
-            <li>
-                <Link to="/pricing" className="hover:text-gray-300 transition">
-                    Pricing
-                </Link>
-            </li>
-            <li>
-                <Link to="/support" className="hover:text-gray-300 transition">
-                    Support
-                </Link>
-            </li>
-            <li>
-                <Link to="/login" className="hover:text-gray-300 transition">
-                    Login
-                </Link>
-            </li>
-            <li>
-                <button className="bg-blue-500 text-gray-300 px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold border border-blue-500">
-                    Download
-                </button>
-            </li>
+        <ul className="hidden md:flex py-2 rounded-md px-3 border backdrop-blur-2xl border-gray-700 bg-gray-800 space-x-8 items-center">
+          <li>
+            <Link to="/" className="hover:text-gray-300 transition">
+              Home
+            </Link>
+          </li>
+          <li>
+            <Link to="/features" className="hover:text-gray-300 transition">
+              Features
+            </Link>
+          </li>
+          
+          <li>
+            <Link to="/donate" className="hover:text-gray-300 transition">
+              Donate
+            </Link>
+          </li>
+
         </ul>
+
+      {/* links In Disktop */}
+        <div className='hidden md:flex space-x-6 items-center list-none'>
+          <li>
+            <Link to="/login" className="hover:text-gray-300 transition">
+              Login
+            </Link>
+          </li>
+          <li>
+            <button className="bg-blue-500 text-gray-300 px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold border border-blue-500">
+              Download
+            </button>
+          </li>
+        </div>
+
         <button
           className="md:hidden text-blue-500 focus:outline-none"
           onClick={() => setMenuOpen(!menuOpen)}

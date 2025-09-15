@@ -1,5 +1,6 @@
 import React from 'react'
 import { FaRegFileVideo } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
 export default function Footer() {
   return (
@@ -15,10 +16,10 @@ export default function Footer() {
         {/* Links */}
         <ul className="flex gap-8 text-sm">
           <li>
-            <a href="#" className="hover:text-blue-500 transition">Terms of Service</a>
+            <Link to="/terms" className="hover:text-blue-500 transition">Terms of Service</Link>
           </li>
           <li>
-            <a href="#" className="hover:text-blue-500 transition">Privacy Policy</a>
+            <Link to="/privacyPolicy" className="hover:text-blue-500 transition">Privacy Policy</Link>
           </li>
           <li>
             <a href="#" className="hover:text-blue-500 transition">Contact Us</a>

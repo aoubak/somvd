@@ -22,3 +22,28 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Backend runtime artifacts
+backend/downloads/
+backend/temp/
+
+# Environment files (keep examples tracked)
+.env
+.env.*
+!.env.example
+
+# Build outputs
+build/
+out/
+.vite/
+.cache/
+.parcel-cache/
+.eslintcache
+.turbo/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# OS-specific
+Thumbs.db
