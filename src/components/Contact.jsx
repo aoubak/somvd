@@ -6,7 +6,7 @@ import { FaX } from 'react-icons/fa6';
 export default function Contact() {
     return (
         <section className="bg-gray-900 text-blue-500 py-16 px-4">
-            <div className="max-w-5xl mx-auto bg-gray-800 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-between p-8 gap-8">
+            <div className="max-w-6xl mx-auto bg-gradient-to-b from-purple-900/20 to-purple-950 border border-purple-900 rounded-2xl shadow-xl flex flex-col md:flex-row items-center justify-between p-8 gap-8">
                 {/* Left Side: Info */}
                 <div className="flex-1 mb-8 md:mb-0">
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Get in Touch</h2>

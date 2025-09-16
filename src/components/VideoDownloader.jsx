@@ -46,7 +46,7 @@ export default function VideoDownloader() {
 
   const handleDownload = async (e) => {
     e.preventDefault();
-    
+
     if (!url.trim()) {
       setDownloadStatus({ type: 'error', message: 'Please enter a video URL' });
       return;
@@ -65,15 +65,15 @@ export default function VideoDownloader() {
       const videoData = await videoDownloadService.getVideoInfo(url);
       setVideoInfo(videoData);
       setSelectedFormat(videoData.formats[1]?.id || 'mp4_720p'); // Default to 720p
-      
-      setDownloadStatus({ 
-        type: 'success', 
-        message: `Video from ${videoData.platform} is ready for download!` 
+
+      setDownloadStatus({
+        type: 'success',
+        message: `Video from ${videoData.platform} is ready for download!`
       });
     } catch (error) {
-      setDownloadStatus({ 
-        type: 'error', 
-        message: error.message || 'Failed to process video. Please try again.' 
+      setDownloadStatus({
+        type: 'error',
+        message: error.message || 'Failed to process video. Please try again.'
       });
     } finally {
       setIsLoading(false);
@@ -143,11 +143,10 @@ export default function VideoDownloader() {
 
       {/* Status Messages */}
       {downloadStatus && (
-        <div className={`p-4 rounded-lg mb-6 flex items-center gap-3 ${
-          downloadStatus.type === 'success' 
-            ? 'bg-green-900/50 border border-green-500 text-green-300' 
-            : 'bg-red-900/50 border border-red-500 text-red-300'
-        }`}>
+        <div className={`p-4 rounded-lg mb-6 flex items-center gap-3 ${downloadStatus.type === 'success'
+          ? 'bg-green-900/50 border border-green-500 text-green-300'
+          : 'bg-red-900/50 border border-red-500 text-red-300'
+          }`}>
           {downloadStatus.type === 'success' ? (
             <FaCheckCircle className="text-green-400" />
           ) : (
@@ -162,8 +161,8 @@ export default function VideoDownloader() {
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="relative">
-              <img 
-                src={videoInfo.thumbnail} 
+              <img
+                src={videoInfo.thumbnail}
                 alt="Video thumbnail"
                 className="w-full md:w-64 h-36 object-cover rounded-lg"
               />
@@ -175,11 +174,11 @@ export default function VideoDownloader() {
               <h3 className="text-xl font-semibold text-white mb-3">{videoInfo.title}</h3>
               <div className="flex flex-wrap gap-4 text-gray-300 mb-4">
                 <span className="flex items-center gap-2">
-                  <span className="text-blue-400">Platform:</span> 
+                  <span className="text-blue-400">Platform:</span>
                   <span className="bg-blue-500/20 px-2 py-1 rounded text-blue-300">{videoInfo.platform}</span>
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="text-blue-400">Duration:</span> 
+                  <span className="text-blue-400">Duration:</span>
                   <span className="bg-gray-700 px-2 py-1 rounded">{videoInfo.duration}</span>
                 </span>
               </div>
@@ -194,11 +193,10 @@ export default function VideoDownloader() {
                     <button
                       key={format.id}
                       onClick={() => setSelectedFormat(format.id)}
-                      className={`p-3 rounded-lg border transition-all text-left ${
-                        selectedFormat === format.id
-                          ? 'border-blue-500 bg-blue-500/20 text-blue-300'
-                          : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
-                      }`}
+                      className={`p-3 rounded-lg border transition-all text-left ${selectedFormat === format.id
+                        ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                        }`}
                     >
                       <div className="font-medium">{format.label}</div>
                       <div className="text-sm opacity-75">Size: ~{format.size}</div>
@@ -209,7 +207,7 @@ export default function VideoDownloader() {
 
               {/* Download Actions */}
               <div className="flex flex-wrap gap-3">
-                <button 
+                <button
                   onClick={() => handleActualDownload(selectedFormat)}
                   disabled={isDownloading}
                   className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white px-6 py-3 rounded-lg transition flex items-center gap-2 font-semibold"
@@ -226,7 +224,7 @@ export default function VideoDownloader() {
                     </>
                   )}
                 </button>
-                <button 
+                <button
                   onClick={resetForm}
                   className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg transition"
                 >
@@ -243,11 +241,16 @@ export default function VideoDownloader() {
         <p className="text-gray-400 mb-3">Supported platforms:</p>
         <div className="flex flex-wrap justify-center gap-2">
           {supportedPlatforms.map((platform) => (
-            <span 
+            <span
               key={platform.name}
-              className="bg-gray-800 text-gray-300 px-3 py-1 rounded-full text-sm flex items-center gap-1"
+              className="bg-gray-800 relative border border-gray-600 text-gray-300 px-3 py-1 rounded-full text-sm flex items-center gap-1"
             >
-              <span>{platform.icon}</span>
+              {/* <span>{platform.icon}</span> */}
+              {/* <span className='bg-green-600 w-2 h-2 animate-ping rounded-full'></span> */}
+              <span class="relative flex size-3 mr-1">
+                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                <span class="relative inline-flex size-3 rounded-full bg-green-500"></span>
+              </span>
               {platform.name}
             </span>
           ))}

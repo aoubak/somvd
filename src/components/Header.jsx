@@ -12,7 +12,7 @@ export default function Header() {
         <Link to="/" className="text-white text-2xl font-bold">SOMVD</Link>
 
         {/* Desktop Links */}
-        <ul className="hidden md:flex py-2 rounded-md px-3 border backdrop-blur-2xl border-gray-700 bg-gray-800 space-x-8 items-center">
+        <ul className="hidden md:flex py-2 rounded-md px-3 border  backdrop-blur-2xl border-gray-700  space-x-8 items-center">
           <li>
             <Link to="/" className="hover:text-gray-300 transition">
               Home
@@ -23,7 +23,7 @@ export default function Header() {
               Features
             </Link>
           </li>
-          
+
           <li>
             <Link to="/donate" className="hover:text-gray-300 transition">
               Donate
@@ -32,7 +32,7 @@ export default function Header() {
 
         </ul>
 
-      {/* links In Disktop */}
+        {/* links In Disktop */}
         <div className='hidden md:flex space-x-6 items-center list-none'>
           <li>
             <Link to="/login" className="hover:text-gray-300 transition">
@@ -59,12 +59,25 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {menuOpen && (
-        <div className="md:hidden bg-gray-800 px-4 py-2">
+        <div className="md:hidden bg-gray-800/45 backdrop-blur-2xl px-4 py-2">
           <ul className="space-y-2">
-            <li><a href="#features" className="block hover:text-white transition">Features</a></li>
-            <li><a href="#pricing" className="block hover:text-white transition">Pricing</a></li>
-            <li><a href="#support" className="block hover:text-white transition">Support</a></li>
-            <li><a href="#login" className="block hover:text-white transition">Login</a></li>
+            <li>
+              <Link to="/" className="hover:text-gray-300 transition">
+                Home
+              </Link>
+            </li>
+            <li>
+              <Link to="/features" className="hover:text-gray-300 transition">
+                Features
+              </Link>
+            </li>
+
+            <li>
+              <Link to="/donate" className="hover:text-gray-300 transition">
+                Donate
+              </Link>
+            </li>
+            <li><Link to="/login" className="block hover:text-white transition">Login</Link></li>
             <li>
               <button className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold border border-blue-500">
                 Download

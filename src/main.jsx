@@ -8,6 +8,7 @@ import Features from './pages/Features.jsx'
 import Pricing from './pages/Pricing.jsx'
 import Donate from './pages/Donate.jsx'
 import Login from './pages/Login.jsx'
+import Signup from './pages/Signup.jsx'
 import { RouterProvider } from 'react-router-dom'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 import Terms from './pages/Terms.jsx'
@@ -22,6 +23,7 @@ const router = createBrowserRouter([
       {path: '/pricing', element: <Pricing />},
       {path: '/donate', element: <Donate />},
       {path: '/login', element: <Login />},
+      {path: '/signup', element: <Signup />},
       {path: '/privacyPolicy', element: <PrivacyPolicy />},
       {path: '/terms', element: <Terms />},
     ],

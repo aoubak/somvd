@@ -4,8 +4,8 @@ import VideoDownloader from './VideoDownloader'
 export default function Hero() {
   return (
      <section className="bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 pt-12 pb-20 px-4 md:px-0">
-      <div className="max-w-4xl mx-auto text-center mb-10">
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+      <div className="max-w-4xl mx-auto  mb-10">
+        <h1 className="text-4xl text-left md:text-center md:text-5xl font-bold text-white mb-6 leading-tight">
           Download Videos Instantly <br />
           <span className="text-blue-500">From Anywhere</span>
         </h1>
