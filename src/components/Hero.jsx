@@ -1,39 +1,42 @@
-import React from 'react'
-import VideoDownloader from './VideoDownloader'
+import { platformLabel } from '../lib/format';
+import videoDownloadService from '../services/videoDownloadService';
+import VideoDownloader from './downloader/VideoDownloader';
+import Container from './ui/Container';
+import PlatformIcon from './ui/PlatformIcon';
+
+const GLOW = { background: 'radial-gradient(60% 60% at 50% 0%, rgb(198 244 50 / 0.08), transparent 70%)' };
 
 export default function Hero() {
   return (
-     <section className="bg-gradient-to-b from-gray-900 via-purple-950 to-gray-900 pt-12 pb-20 px-4 md:px-0">
-      <div className="max-w-4xl mx-auto  mb-10">
-        <h1 className="text-4xl text-left md:text-center md:text-5xl font-bold text-white mb-6 leading-tight">
-          Download Videos Instantly <br />
-          <span className="text-blue-500">From Anywhere</span>
-        </h1>
-        <p className="text-lg md:text-xl text-gray-300 mb-8">
-          SOMVD makes it easy to save your favorite videos from any platform. Fast, secure, and free.
+    <section aria-labelledby="hero-title" className="relative">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[520px]" style={GLOW} />
+      <Container className="relative pb-20 pt-14 text-center sm:pb-28 sm:pt-24">
+        <p className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-xs text-ink-2">
+          <span className="size-1.5 rounded-full bg-lime shadow-[0_0_10px_var(--color-lime)]" aria-hidden="true" />
+          Private by design · Nothing stored
         </p>
-      </div>
-      
-      <VideoDownloader />
-      
-      {/* Features Preview */}
-      <div className="max-w-4xl mx-auto mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-          <div className="text-3xl mb-3">⚡</div>
-          <h3 className="text-white font-semibold mb-2">Lightning Fast</h3>
-          <p className="text-gray-400 text-sm">Download videos in seconds with our optimized servers</p>
+        <h1 id="hero-title" className="mx-auto mt-6 max-w-3xl text-[44px] font-semibold leading-[1.02] tracking-[-0.045em] sm:text-6xl">
+          Any video.
+          <br />
+          <span className="text-ink-4">One paste away.</span>
+        </h1>
+        <p className="mx-auto mt-5 max-w-md text-[15px] leading-relaxed text-ink-3">
+          Paste a link, pick a quality, done. No account, no ads, nothing stored on our servers.
+        </p>
+
+        <div className="mt-9">
+          <VideoDownloader />
         </div>
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-          <div className="text-3xl mb-3">🔒</div>
-          <h3 className="text-white font-semibold mb-2">100% Secure</h3>
-          <p className="text-gray-400 text-sm">Your privacy is protected. No data stored or shared</p>
-        </div>
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-          <div className="text-3xl mb-3">🆓</div>
-          <h3 className="text-white font-semibold mb-2">Completely Free</h3>
-          <p className="text-gray-400 text-sm">No hidden fees, no ads, no registration required</p>
-        </div>
-      </div>
+
+        <ul aria-label="Supported platforms" className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-[13px] font-medium text-ink-4">
+          {videoDownloadService.getSupportedPlatforms().map(platform => (
+            <li key={platform.name} className="flex items-center gap-2">
+              <PlatformIcon name={platform.name} className="size-3.5" />
+              {platformLabel(platform.name)}
+            </li>
+          ))}
+        </ul>
+      </Container>
     </section>
-  )
+  );
 }
