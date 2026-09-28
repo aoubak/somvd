@@ -60,7 +60,7 @@ Expected: `font-family: 'Geist Variable';` and `font-family: 'Geist Mono Variabl
 - [ ] **Step 2: Move login-only CSS out of the global sheet**
 
 ```bash
-{ echo "/* Styles for the (currently unrouted) Login and Signup pages, moved out of the global sheet */"; git show HEAD:src/index.css | sed -n '13,$p'; } > src/pages/auth.css
+{ echo "/* Styles for the (currently unrouted) Login and Signup pages, moved out of the global sheet */"; git show HEAD:src/index.css | sed -n '12,$p'; } > src/pages/auth.css
 ```
 Add `import './auth.css';` as the first import line of `src/pages/Login.jsx` and `src/pages/Signup.jsx`.
 
