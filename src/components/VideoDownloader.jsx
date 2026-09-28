@@ -26,7 +26,7 @@ export default function VideoDownloader() {
         if (isMounted && json?.data) {
           setSupportedPlatforms(json.data);
         }
-      } catch (err) {
+      } catch {
         // Keep initial defaults from service on failure
       }
     })();
@@ -64,7 +64,12 @@ export default function VideoDownloader() {
     try {
       const videoData = await videoDownloadService.getVideoInfo(url);
       setVideoInfo(videoData);
-      setSelectedFormat(videoData.formats[1]?.id || 'mp4_720p'); // Default to 720p
+      // Default to 720p, else the best video format, else whatever is offered
+      const defaultFormat =
+        videoData.formats.find(f => f.quality === '720p') ||
+        videoData.formats.find(f => f.type === 'video') ||
+        videoData.formats[0];
+      setSelectedFormat(defaultFormat?.id);
 
       setDownloadStatus({
         type: 'success',
@@ -80,15 +85,16 @@ export default function VideoDownloader() {
     }
   };
 
-  const handleActualDownload = async (format) => {
+  const handleActualDownload = async (formatId) => {
     if (!videoInfo) return;
 
     setIsDownloading(true);
     try {
       // Use streaming endpoint (no disk) by default
+      const format = videoInfo.formats.find(f => f.id === formatId);
       await videoDownloadService.streamVideo(videoInfo, format);
       setDownloadStatus({ type: 'success', message: 'Streaming download started...' });
-    } catch (error) {
+    } catch {
       setDownloadStatus({
         type: 'error',
         message: 'Download failed. Please try again.'
@@ -161,11 +167,17 @@ export default function VideoDownloader() {
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="relative">
-              <img
-                src={videoInfo.thumbnail}
-                alt="Video thumbnail"
-                className="w-full md:w-64 h-36 object-cover rounded-lg"
-              />
+              {videoInfo.thumbnail ? (
+                <img
+                  src={videoInfo.thumbnail}
+                  alt="Video thumbnail"
+                  className="w-full md:w-64 h-36 object-cover rounded-lg"
+                />
+              ) : (
+                <div className="w-full md:w-64 h-36 rounded-lg bg-gradient-to-br from-blue-900 to-gray-800 flex items-end p-3">
+                  <span className="text-sm font-semibold text-blue-200">{videoInfo.platform}</span>
+                </div>
+              )}
               <div className="absolute inset-0 flex items-center justify-center">
                 <FaPlay className="text-white text-3xl opacity-80" />
               </div>
@@ -247,9 +259,9 @@ export default function VideoDownloader() {
             >
               {/* <span>{platform.icon}</span> */}
               {/* <span className='bg-green-600 w-2 h-2 animate-ping rounded-full'></span> */}
-              <span class="relative flex size-3 mr-1">
-                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-                <span class="relative inline-flex size-3 rounded-full bg-green-500"></span>
+              <span className="relative flex size-3 mr-1">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex size-3 rounded-full bg-green-500"></span>
               </span>
               {platform.name}
             </span>

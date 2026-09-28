@@ -4,8 +4,6 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const compression = require('compression');
-const path = require('path');
-const fs = require('fs-extra');
 require('dotenv').config();
 
 // Import routes
@@ -40,15 +38,6 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
-const downloadLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10, // Limit each IP to 10 downloads per minute
-  message: {
-    error: 'Too many download requests, please wait before trying again.',
-    retryAfter: '1 minute'
-  }
-});
-
 // Streaming-specific rate limiter (more conservative to protect bandwidth)
 const streamLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -61,7 +50,6 @@ const streamLimiter = rateLimit({
 
 // Apply rate limiting
 app.use(limiter);
-app.use('/api/video/download', downloadLimiter);
 app.use('/api/video/stream', streamLimiter);
 
 // Middleware
@@ -69,17 +57,6 @@ app.use(compression());
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Create necessary directories
-const createDirectories = async () => {
-  try {
-    await fs.ensureDir(path.join(__dirname, 'downloads'));
-    await fs.ensureDir(path.join(__dirname, 'temp'));
-    console.log('✅ Required directories created/verified');
-  } catch (error) {
-    console.error('❌ Error creating directories:', error);
-  }
-};
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -94,11 +71,9 @@ app.get('/api/health', (req, res) => {
 // API routes
 app.use('/api/video', videoRoutes);
 
-// Serve static files (downloaded videos)
-app.use('/downloads', express.static(path.join(__dirname, 'downloads')));
-
 // Error handling middleware
-app.use((err, req, res, next) => {
+// Express identifies error handlers by their four arguments, so _next must stay
+app.use((err, req, res, _next) => {
   console.error('Error:', err);
   
   // Handle different types of errors
@@ -131,55 +106,13 @@ app.use('*', (req, res) => {
   });
 });
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('🔄 SIGTERM received, shutting down gracefully...');
-  
-  // Clean up temporary files
-  try {
-    await fs.emptyDir(path.join(__dirname, 'temp'));
-    console.log('✅ Temporary files cleaned up');
-  } catch (error) {
-    console.error('❌ Error cleaning up temp files:', error);
-  }
-  
-  process.exit(0);
-});
-
-process.on('SIGINT', async () => {
-  console.log('🔄 SIGINT received, shutting down gracefully...');
-  
-  // Clean up temporary files
-  try {
-    await fs.emptyDir(path.join(__dirname, 'temp'));
-    console.log('✅ Temporary files cleaned up');
-  } catch (error) {
-    console.error('❌ Error cleaning up temp files:', error);
-  }
-  
-  process.exit(0);
-});
-
 // Start server
-const startServer = async () => {
-  try {
-    await createDirectories();
-    
-    app.listen(PORT, () => {
-      console.log('🚀 SOMVD Backend Server Started!');
-      console.log(`📡 Server running on port ${PORT}`);
-      console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`🎥 Video API: http://localhost:${PORT}/api/video`);
-      console.log(`🔒 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-      console.log('📁 Downloads directory ready');
-      console.log('⚡ Ready to process video downloads!');
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
-  }
-};
-
-startServer();
+app.listen(PORT, () => {
+  console.log('🚀 SOMVD Backend Server Started!');
+  console.log(`📡 Server running on port ${PORT}`);
+  console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🎥 Video API: http://localhost:${PORT}/api/video`);
+  console.log(`🔒 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+});
 
 module.exports = app;

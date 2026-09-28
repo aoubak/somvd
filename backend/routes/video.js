@@ -5,8 +5,6 @@ const https = require('https');
 const { URL } = require('url');
 const { body, query, validationResult } = require('express-validator');
 const videoProcessor = require('../services/videoProcessor');
-const path = require('path');
-const fs = require('fs-extra');
 
 const router = express.Router();
 
@@ -17,16 +15,6 @@ const validateUrl = [
     .withMessage('Please provide a valid URL')
     .isLength({ min: 10, max: 2000 })
     .withMessage('URL must be between 10 and 2000 characters')
-];
-
-const validateDownload = [
-  body('videoId')
-    .isUUID()
-    .withMessage('Invalid video ID'),
-  body('formatId')
-    .isString()
-    .isLength({ min: 1, max: 50 })
-    .withMessage('Invalid format ID')
 ];
 
 // Error handler for validation
@@ -50,8 +38,8 @@ const validateStream = [
     .withMessage('URL must be between 10 and 2000 characters'),
   query('quality')
     .optional()
-    .isIn(['360p', '480p', '720p', '1080p', 'best'])
-    .withMessage('Quality must be one of 360p, 480p, 720p, 1080p, best')
+    .isIn(videoProcessor.streamQualities)
+    .withMessage(`Quality must be one of ${videoProcessor.streamQualities.join(', ')}`)
 ];
 
 // GET /api/video/health - Health check for video service
@@ -116,118 +104,6 @@ router.post('/info', validateUrl, handleValidationErrors, async (req, res) => {
   }
 });
 
-// POST /api/video/download - Download video
-router.post('/download', validateDownload, handleValidationErrors, async (req, res) => {
-  try {
-    const { videoId, formatId, videoInfo } = req.body;
-    
-    console.log(`📥 Download request - Video: ${videoId}, Format: ${formatId}`);
-    
-    // Validate video info is provided
-    if (!videoInfo) {
-      return res.status(400).json({
-        error: 'Missing video information',
-        message: 'Video information is required for download'
-      });
-    }
-    
-    // Validate format exists
-    const format = videoInfo.formats.find(f => f.id === formatId);
-    if (!format) {
-      return res.status(400).json({
-        error: 'Invalid format',
-        message: 'The requested format is not available for this video'
-      });
-    }
-    
-    // Start download process
-    const downloadResult = await videoProcessor.downloadVideo(videoInfo, formatId);
-    
-    console.log(`✅ Download completed: ${downloadResult.filename}`);
-    
-    res.json({
-      success: true,
-      data: downloadResult,
-      message: 'Video downloaded successfully'
-    });
-
-  } catch (error) {
-    console.error('Download error:', error);
-    
-    if (error.message.includes('Download tool not available')) {
-      return res.status(503).json({
-        error: 'Service unavailable',
-        message: 'Download service is temporarily unavailable. Please try again later.'
-      });
-    }
-    
-    if (error.message.includes('Download failed')) {
-      return res.status(422).json({
-        error: 'Download failed',
-        message: 'Unable to download the video. It may be protected or unavailable.'
-      });
-    }
-    
-    res.status(500).json({
-      error: 'Download failed',
-      message: 'An error occurred during download. Please try again.'
-    });
-  }
-});
-
-// GET /api/video/download/:filename - Serve downloaded file
-router.get('/download/:filename', async (req, res) => {
-  try {
-    const { filename } = req.params;
-    
-    // Sanitize filename to prevent directory traversal
-    const sanitizedFilename = path.basename(filename);
-    const filePath = path.join(__dirname, '..', 'downloads', sanitizedFilename);
-    
-    // Check if file exists
-    const exists = await fs.pathExists(filePath);
-    if (!exists) {
-      return res.status(404).json({
-        error: 'File not found',
-        message: 'The requested file does not exist or has been removed'
-      });
-    }
-    
-    // Get file stats
-    const stats = await fs.stat(filePath);
-    const fileSize = stats.size;
-    
-    // Set appropriate headers
-    const ext = path.extname(sanitizedFilename).toLowerCase();
-    const mimeTypes = {
-      '.mp4': 'video/mp4',
-      '.mp3': 'audio/mpeg',
-      '.webm': 'video/webm',
-      '.m4a': 'audio/mp4'
-    };
-    
-    const mimeType = mimeTypes[ext] || 'application/octet-stream';
-    
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Content-Length', fileSize);
-    res.setHeader('Content-Disposition', `attachment; filename="${sanitizedFilename}"`);
-    res.setHeader('Cache-Control', 'no-cache');
-    
-    // Stream the file
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
-    
-    console.log(`📤 File served: ${sanitizedFilename} (${fileSize} bytes)`);
-    
-  } catch (error) {
-    console.error('File serve error:', error);
-    res.status(500).json({
-      error: 'File access failed',
-      message: 'Unable to access the requested file'
-    });
-  }
-});
-
 // GET /api/video/platforms - Get supported platforms
 router.get('/platforms', (req, res) => {
   const platforms = Object.values(videoProcessor.supportedPlatforms).map(platform => ({
@@ -240,70 +116,6 @@ router.get('/platforms', (req, res) => {
     data: platforms,
     count: platforms.length
   });
-});
-
-// DELETE /api/video/cleanup - Clean up old files (admin endpoint)
-router.delete('/cleanup', async (req, res) => {
-  try {
-    const maxAgeHours = req.query.maxAge ? parseInt(req.query.maxAge) : 24;
-    
-    if (maxAgeHours < 1 || maxAgeHours > 168) { // 1 hour to 1 week
-      return res.status(400).json({
-        error: 'Invalid max age',
-        message: 'Max age must be between 1 and 168 hours'
-      });
-    }
-    
-    await videoProcessor.cleanupOldFiles(maxAgeHours);
-    
-    res.json({
-      success: true,
-      message: `Cleanup completed for files older than ${maxAgeHours} hours`
-    });
-    
-  } catch (error) {
-    console.error('Cleanup error:', error);
-    res.status(500).json({
-      error: 'Cleanup failed',
-      message: 'Unable to perform cleanup operation'
-    });
-  }
-});
-
-// GET /api/video/stats - Get service statistics
-router.get('/stats', async (req, res) => {
-  try {
-    const downloadsDir = path.join(__dirname, '..', 'downloads');
-    const files = await fs.readdir(downloadsDir);
-    
-    let totalSize = 0;
-    let fileCount = 0;
-    
-    for (const file of files) {
-      const filePath = path.join(downloadsDir, file);
-      const stats = await fs.stat(filePath);
-      totalSize += stats.size;
-      fileCount++;
-    }
-    
-    res.json({
-      success: true,
-      data: {
-        totalFiles: fileCount,
-        totalSize: videoProcessor.formatFileSize ? videoProcessor.formatFileSize(totalSize) : `${totalSize} bytes`,
-        supportedPlatforms: Object.keys(videoProcessor.supportedPlatforms).length,
-        uptime: process.uptime(),
-        memoryUsage: process.memoryUsage()
-      }
-    });
-    
-  } catch (error) {
-    console.error('Stats error:', error);
-    res.status(500).json({
-      error: 'Stats unavailable',
-      message: 'Unable to retrieve service statistics'
-    });
-  }
 });
 
 // GET /api/video/stream - Stream media without saving to disk
@@ -341,7 +153,16 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
     ytdlp.stdout.on('data', (d) => { stdout += d.toString(); });
     ytdlp.stderr.on('data', (d) => { stderr += d.toString(); });
 
+    // A missing python/yt-dlp emits 'error' (and may still emit 'close'); answer once instead of crashing
+    ytdlp.on('error', (err) => {
+      console.error('yt-dlp spawn error:', err);
+      if (!res.headersSent) {
+        res.status(503).json({ error: 'Service unavailable', message: 'Video processing tool not available. Please try again later.' });
+      }
+    });
+
     ytdlp.on('close', () => {
+      if (res.headersSent) return;
       try {
         if (!stdout) {
           // Map common yt-dlp errors
@@ -361,31 +182,52 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
         const info = JSON.parse(stdout);
         const formats = Array.isArray(info.formats) ? info.formats : [];
 
-        // Helper: map quality to numeric height
-        const qToH = { '360p': 360, '480p': 480, '720p': 720, '1080p': 1080 };
-        const targetH = qToH[quality] || null;
+        // Map quality like '720p' to numeric height ('best' and 'audio' have none)
+        const targetH = /^\d+p$/.test(quality) ? parseInt(quality, 10) : null;
 
-        // Filter progressive A+V formats (have both audio and video)
-        const progressive = formats.filter(f => (
-          (f.acodec && f.acodec !== 'none') && (f.vcodec && f.vcodec !== 'none') && f.url
-        ));
+        let selected;
 
-        // Prefer mp4, then others; apply height constraint if provided
-        const candidates = progressive
-          .filter(f => (targetH ? (f.height ? f.height <= targetH : true) : true))
-          .sort((a, b) => {
-            // Sort by height desc, prefer mp4, then filesize desc if available
-            const ah = a.height || 0, bh = b.height || 0;
-            if (bh !== ah) return bh - ah;
-            const amp4 = (a.ext === 'mp4') ? 1 : 0;
-            const bmp4 = (b.ext === 'mp4') ? 1 : 0;
-            if (bmp4 !== amp4) return bmp4 - amp4;
-            const asz = a.filesize || a.filesize_approx || 0;
-            const bsz = b.filesize || b.filesize_approx || 0;
-            return (bsz - asz);
-          });
+        if (quality === 'audio') {
+          // Same selection /info used to offer the audio option
+          selected = videoProcessor.pickAudioFormat(formats);
+          if (!selected) {
+            return res.status(422).json({
+              error: 'Format not available',
+              message: 'This video has no separate audio track. Download the video instead.'
+            });
+          }
+        } else {
+          // Filter progressive A+V formats (direct URL, height and both codecs)
+          const progressive = formats.filter(f => (
+            videoProcessor.isDirectFormat(f) && (f.height && Number.isFinite(f.height)) &&
+            (f.acodec && f.acodec !== 'none') && (f.vcodec && f.vcodec !== 'none')
+          ));
 
-        const selected = candidates[0] || null;
+          // Prefer mp4, then others; apply height constraint if provided
+          const candidates = progressive
+            .filter(f => (targetH ? (f.height ? f.height <= targetH : true) : true))
+            .sort((a, b) => {
+              // Sort by height desc, prefer mp4, then filesize desc if available
+              const ah = a.height || 0, bh = b.height || 0;
+              if (bh !== ah) return bh - ah;
+              const amp4 = (a.ext === 'mp4') ? 1 : 0;
+              const bmp4 = (b.ext === 'mp4') ? 1 : 0;
+              if (bmp4 !== amp4) return bmp4 - amp4;
+              const asz = a.filesize || a.filesize_approx || 0;
+              const bsz = b.filesize || b.filesize_approx || 0;
+              return (bsz - asz);
+            });
+
+          selected = candidates[0] || null;
+
+          // Guard against accidental audio-only selection
+          if (selected && (
+            (selected.ext && /^(m4a|mp3|aac|opus)$/i.test(selected.ext)) ||
+            (selected.mime_type && /^audio\//i.test(selected.mime_type))
+          )) {
+            selected = null;
+          }
+        }
 
         if (!selected) {
           // Fallback: attempt merge to stdout using ffmpeg (no Range support)
@@ -400,16 +242,17 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
           // Quick ffmpeg availability check
           const ffmpegBin = process.env.FFMPEG_PATH || 'ffmpeg';
           const ffv = spawn(ffmpegBin, ['-version']);
+          // 'error' and 'close' can both fire when ffmpeg is missing; only the first may respond
           ffv.on('error', () => {
-            return res.status(422).json({
+            if (res.headersSent) return;
+            res.status(422).json({
               error: 'FFmpeg not found',
               message: 'FFmpeg is required to merge audio and video. Install FFmpeg or set FFMPEG_PATH to the ffmpeg binary.'
             });
           });
-          let ffOk = false;
           ffv.on('close', (code) => {
-            ffOk = code === 0;
-            if (!ffOk) {
+            if (res.headersSent) return;
+            if (code !== 0) {
               return res.status(422).json({
                 error: 'Format not available',
                 message: 'No progressive stream found and FFmpeg is not available to merge. Install FFmpeg or try a different quality.'
@@ -444,9 +287,8 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
 
             ytdlpMerge.stdout.pipe(res);
 
-            ytdlpMerge.stderr.on('data', (d) => {
-              // Optional: log progress/errors
-            });
+            // Drain stderr so the child never blocks on a full pipe
+            ytdlpMerge.stderr.on('data', () => {});
 
             ytdlpMerge.on('error', (err) => {
               if (!res.headersSent) {
