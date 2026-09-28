@@ -87,6 +87,15 @@ class VideoProcessor {
     return this.detectPlatform(url) !== null;
   }
 
+  // Every yt-dlp call starts here. Current yt-dlp needs a JavaScript runtime for full YouTube
+  // support; set YTDLP_JS_RUNTIMES=off for yt-dlp versions older than 2025.11.
+  ytdlpArgs(...args) {
+    const runtimes = process.env.YTDLP_JS_RUNTIMES ?? 'node';
+    const base = ['-m', 'yt_dlp'];
+    if (runtimes && runtimes !== 'off') base.push('--js-runtimes', runtimes);
+    return [...base, ...args];
+  }
+
   // Formats we can proxy byte-for-byte (not HLS/DASH manifests)
   isDirectFormat(f) {
     return Boolean(f && f.url) && (!f.protocol || f.protocol === 'https' || f.protocol === 'http');
@@ -117,13 +126,7 @@ class VideoProcessor {
       }
 
       // yt-dlp command to get video info
-      const ytdlp = spawn('python', [
-        '-m', 'yt_dlp',
-        '--dump-json',
-        '--no-download',
-        '--no-warnings',
-        url
-      ]);
+      const ytdlp = spawn('python', this.ytdlpArgs('--dump-json', '--no-download', '--no-warnings', url));
 
       let stdout = '';
       let stderr = '';
@@ -187,12 +190,18 @@ class VideoProcessor {
     const processedFormats = [];
     const seenQualities = new Set();
 
-    // Sort formats by quality (best first)
+    // Sort formats by quality (best first); within a height, formats that report a size come first
+    const bytesOf = (f) => f.filesize || f.filesize_approx || 0;
     const sortedFormats = rawFormats.sort((a, b) => {
       const aHeight = a.height || 0;
       const bHeight = b.height || 0;
-      return bHeight - aHeight;
+      if (bHeight !== aHeight) return bHeight - aHeight;
+      return (bytesOf(b) ? 1 : 0) - (bytesOf(a) ? 1 : 0);
     });
+
+    // Offer audio only when /stream can serve the same audio-only format
+    const audioFormat = this.pickAudioFormat(sortedFormats);
+    const audioBytes = audioFormat ? bytesOf(audioFormat) : 0;
 
     // Process video formats - prioritize combined audio+video formats
     for (const format of sortedFormats) {
@@ -209,11 +218,15 @@ class VideoProcessor {
           // Check if this format has both video and audio
           const hasAudio = format.acodec && format.acodec !== 'none';
 
+          // Video-only formats get merged with the audio track, so count both
+          const videoBytes = bytesOf(format);
+          const totalBytes = videoBytes ? videoBytes + (hasAudio ? 0 : audioBytes) : null;
+
           processedFormats.push({
             id: `mp4_${quality}`,
             label: `MP4 ${this.getQualityLabel(quality)}${hasAudio ? ' (with audio)' : ''}`,
             quality: quality,
-            size: this.estimateFileSize(format.filesize, format.duration),
+            size: this.estimateFileSize(totalBytes, format.duration),
             formatId: format.format_id,
             ext: ext,
             type: 'video',
@@ -226,9 +239,6 @@ class VideoProcessor {
       }
     }
 
-    // Offer audio only when /stream can serve the same audio-only format
-    const audioFormat = this.pickAudioFormat(sortedFormats);
-
     if (audioFormat) {
       const ext = audioFormat.ext || 'm4a';
 
@@ -236,7 +246,7 @@ class VideoProcessor {
         id: `audio_${ext}`,
         label: `Audio (${ext.toUpperCase()})`,
         quality: 'audio',
-        size: this.estimateFileSize(audioFormat.filesize || audioFormat.filesize_approx, audioFormat.duration, true),
+        size: this.estimateFileSize(audioBytes || null, audioFormat.duration, true),
         formatId: audioFormat.format_id,
         ext: ext,
         type: 'audio'

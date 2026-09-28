@@ -134,16 +134,13 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
 
     // Resolve media info via yt-dlp (no download)
     const cookiesPath = process.env.YTDLP_COOKIES || process.env.COOKIES_FILE;
-    const ytdlpArgs = [
-      '-m', 'yt_dlp',
+    const ytdlpArgs = videoProcessor.ytdlpArgs(
       '--dump-json',
       '--no-download',
-      '--no-warnings'
-    ];
-    if (cookiesPath) {
-      ytdlpArgs.push('--cookies', cookiesPath);
-    }
-    ytdlpArgs.push(url);
+      '--no-warnings',
+      ...(cookiesPath ? ['--cookies', cookiesPath] : []),
+      url
+    );
 
     const ytdlp = spawn('python', ytdlpArgs);
 
@@ -231,13 +228,9 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
 
         if (!selected) {
           // Fallback: attempt merge to stdout using ffmpeg (no Range support)
-          // Build selector combining best video+audio for requested height, then generic fallbacks
-          let sel;
-          if (targetH) {
-            sel = `bestvideo[height<=${targetH}]+bestaudio/best[height<=${targetH}]/best`;
-          } else {
-            sel = 'bestvideo+bestaudio/best';
-          }
+          // Prefer H.264 + AAC so the merged file plays everywhere; fall back to any codecs
+          const h = targetH ? `[height<=${targetH}]` : '';
+          const sel = `bestvideo${h}[vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo${h}+bestaudio/best${h}/best`;
 
           // Quick ffmpeg availability check
           const ffmpegBin = process.env.FFMPEG_PATH || 'ffmpeg';
@@ -260,18 +253,19 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
             }
 
             // Start yt-dlp merge to stdout
-            const ytdlpArgs = [
-              '-m', 'yt_dlp',
+            const mergeArgs = videoProcessor.ytdlpArgs(
               '-f', sel,
               '--no-playlist',
               '--no-warnings',
               '--merge-output-format', 'mp4',
+              // yt-dlp writes MPEG-TS to stdout by default; ask ffmpeg for fragmented MP4 instead
+              '--downloader-args', 'ffmpeg_o:-f mp4 -movflags +frag_keyframe+empty_moov+default_base_moof',
               ...(process.env.FFMPEG_PATH ? ['--ffmpeg-location', process.env.FFMPEG_PATH] : []),
               ...(cookiesPath ? ['--cookies', cookiesPath] : []),
               '-o', '-',
               url
-            ];
-            const ytdlpMerge = spawn('python', ytdlpArgs);
+            );
+            const ytdlpMerge = spawn('python', mergeArgs);
 
             // Set basic headers (no Content-Length/Range)
             const filenameBase = `${info.title || 'video'}`

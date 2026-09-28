@@ -8,7 +8,7 @@ A powerful Node.js backend service for downloading videos from multiple social m
 - **Multiple Formats**: MP4 (360p, 720p, 1080p, 4K), MP3 audio
 - **Real-time Processing**: Get video info and download in real-time
 - **Security**: Rate limiting, input validation, CORS protection
-- **File Management**: Automatic cleanup of old files
+- **Streaming only**: Files stream straight to the client; nothing is written to disk
 - **RESTful API**: Clean, documented API endpoints
 - **Error Handling**: Comprehensive error handling and logging
 
@@ -16,9 +16,10 @@ A powerful Node.js backend service for downloading videos from multiple social m
 
 Before running the backend, ensure you have:
 
-- **Node.js** (v16 or higher)
-- **Python** (v3.7 or higher)
-- **yt-dlp** (Python package for video downloading)
+- **Node.js** (v16 or higher; also used by yt-dlp as its JavaScript runtime for YouTube)
+- **Python** (v3.9 or higher)
+- **yt-dlp** 2025.11 or newer, with its `yt-dlp-ejs` challenge solver
+- **FFmpeg** on PATH (or `FFMPEG_PATH`), used to merge separate video and audio tracks
 
 ## 🛠️ Installation
 
@@ -31,8 +32,8 @@ cd backend
 # Install Node.js dependencies
 npm install
 
-# Install yt-dlp (video processing tool)
-pip install yt-dlp
+# Install or update yt-dlp with its YouTube challenge solver
+pip install -U "yt-dlp[default]"
 
 # Or use the setup script
 npm run setup
@@ -52,18 +53,18 @@ nano .env
 
 ```env
 # Server Configuration
-PORT=3001
+PORT=3002
 NODE_ENV=development
 
-# Frontend Configuration
+# Frontend Configuration (comma-separated origins)
 FRONTEND_URL=http://localhost:5173
 
-# Security Configuration
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
+# JavaScript runtime yt-dlp uses for YouTube ("off" for yt-dlp older than 2025.11)
+YTDLP_JS_RUNTIMES=node
 
-# File Management
-MAX_FILE_AGE_HOURS=24
+# Optional
+# FFMPEG_PATH=C:\ffmpeg\bin\ffmpeg.exe
+# YTDLP_COOKIES=C:\path\to\cookies.txt
 ```
 
 ## 🚀 Running the Server
@@ -78,7 +79,7 @@ npm run dev
 npm start
 ```
 
-The server will start on `http://localhost:3001`
+The server will start on `http://localhost:3002`
 
 ## 📡 API Endpoints
 
@@ -97,25 +98,15 @@ Content-Type: application/json
 }
 ```
 
-### Download Video
-```http
-POST /api/video/download
-Content-Type: application/json
-
-{
-  "videoId": "uuid-here",
-  "formatId": "mp4_720p",
-  "videoInfo": { ... }
-}
-```
-
 ### Stream Video (no disk)
 ```http
-GET /api/video/stream?url={sourceUrl}&quality={360p|480p|720p|1080p|best}
+GET /api/video/stream?url={sourceUrl}&quality={240p|360p|480p|720p|1080p|1440p|2160p|best|audio}
 ```
-- Streams directly to the client. Prefers progressive A+V; falls back to FFmpeg merge if available.
-- Headers: Content-Type, Content-Disposition, Accept-Ranges (when origin supports).
-- Errors: 400/404/422/429/5xx with JSON body.
+- Streams directly to the client; nothing is written to disk.
+- Video: a progressive (audio + video) file when the platform offers one, otherwise FFmpeg merges the best H.264 + AAC tracks into a fragmented MP4.
+- `audio`: the best audio-only track (M4A preferred), proxied with Range support.
+- Headers: Content-Type, Content-Disposition (exposed to the browser via CORS), Content-Length and Accept-Ranges when the origin provides them.
+- Errors: 400/404/422/429/5xx with a JSON body `{ error, message }`.
 
 Cookies for private Facebook:
 ```
@@ -127,27 +118,12 @@ YTDLP_COOKIES=C:\path\to\cookies.txt
 GET /api/video/platforms
 ```
 
-### Service Statistics
-```http
-GET /api/video/stats
-```
-
-### File Cleanup
-```http
-DELETE /api/video/cleanup?maxAge=24
-```
-
 ## 🔧 Configuration Options
 
 ### Rate Limiting
 - **Window**: 15 minutes
 - **Max Requests**: 100 per IP
-- **Download Limit**: 10 downloads per minute
-
-### File Management
-- **Auto Cleanup**: Files older than 24 hours
-- **Max File Size**: 500MB per download
-- **Storage Location**: `./downloads/`
+- **Stream Limit**: 6 stream starts per minute per IP
 
 ### Security Features
 - **CORS Protection**: Configurable origins
@@ -159,9 +135,9 @@ DELETE /api/video/cleanup?maxAge=24
 
 ### Common Issues
 
-1. **yt-dlp not found**
+1. **yt-dlp not found, or YouTube says "The page needs to be reloaded"**
    ```bash
-   pip install yt-dlp
+   pip install -U "yt-dlp[default]"
    # Or update PATH to include Python scripts
    ```
 
@@ -190,10 +166,10 @@ DELETE /api/video/cleanup?maxAge=24
 npm run dev
 
 # Check if yt-dlp is working
-yt-dlp --version
+python -m yt_dlp --version
 
 # Test API endpoints
-curl http://localhost:3001/api/health
+curl http://localhost:3002/api/health
 ```
 
 ## 📁 Project Structure
