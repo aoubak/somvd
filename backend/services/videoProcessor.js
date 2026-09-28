@@ -101,6 +101,28 @@ class VideoProcessor {
     return Boolean(f && f.url) && (!f.protocol || f.protocol === 'https' || f.protocol === 'http');
   }
 
+  // Turn yt-dlp's stderr into a status and a sentence users can read (raw output stays in the logs)
+  describeYtdlpError(stderr = '') {
+    if (/Requested format is not available/i.test(stderr)) {
+      return { status: 422, error: 'Format not available', message: 'No matching stream is available at the requested quality.' };
+    }
+    if (/Login required|private video|This video is private|Sign in/i.test(stderr)) {
+      return { status: 451, error: 'Unavailable', message: 'This video is private or requires login.' };
+    }
+    if (/not available|unavailable|removed/i.test(stderr)) {
+      return { status: 404, error: 'Not found', message: 'The video is unavailable or was removed.' };
+    }
+    return { status: 502, error: 'Upstream error', message: "We couldn't get this video from the platform right now. Please try again in a moment." };
+  }
+
+  // Same for failures while proxying the media bytes from the platform
+  describeUpstreamError(error) {
+    if (/timeout/i.test(error?.message || '')) {
+      return { status: 504, error: 'Upstream timeout', message: 'The video source took too long to respond. Please try again.' };
+    }
+    return { status: 502, error: 'Upstream fetch failed', message: "Couldn't reach the video source. Please try again." };
+  }
+
   // Best audio-only format that can be proxied directly; prefers m4a, then highest bitrate
   pickAudioFormat(formats) {
     const audioOnly = (formats || []).filter(f => (

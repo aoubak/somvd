@@ -162,18 +162,10 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
       if (res.headersSent) return;
       try {
         if (!stdout) {
-          // Map common yt-dlp errors
-          const msg = (stderr || '').toString();
-          if (/Requested format is not available/i.test(msg)) {
-            return res.status(422).json({ error: 'Format not available', message: 'No matching stream available at the requested quality.' });
-          }
-          if (/Login required|private video|This video is private/i.test(msg)) {
-            return res.status(451).json({ error: 'Unavailable', message: 'This video is private or requires login.' });
-          }
-          if (/not available|Video unavailable|removed/i.test(msg)) {
-            return res.status(404).json({ error: 'Not found', message: 'The video is unavailable or was removed.' });
-          }
-          return res.status(502).json({ error: 'Upstream error', message: msg || 'Failed to retrieve media info' });
+          // Map yt-dlp errors to a readable sentence; keep the raw output in the server log
+          console.error('Stream resolve error:', stderr);
+          const { status, error, message } = videoProcessor.describeYtdlpError(stderr);
+          return res.status(status).json({ error, message });
         }
 
         const info = JSON.parse(stdout);
@@ -281,12 +273,14 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
 
             ytdlpMerge.stdout.pipe(res);
 
-            // Drain stderr so the child never blocks on a full pipe
-            ytdlpMerge.stderr.on('data', () => {});
+            // Drain stderr so the child never blocks on a full pipe; keep the tail for errors
+            let mergeStderr = '';
+            ytdlpMerge.stderr.on('data', (d) => { mergeStderr = (mergeStderr + d).slice(-4096); });
 
             ytdlpMerge.on('error', (err) => {
+              console.error('Merge spawn error:', err);
               if (!res.headersSent) {
-                res.status(503).json({ error: 'Merge failed', message: err.message });
+                res.status(503).json({ error: 'Service unavailable', message: 'Video processing tool not available. Please try again later.' });
               } else {
                 res.end();
               }
@@ -294,9 +288,10 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
 
             ytdlpMerge.on('close', (code) => {
               if (code !== 0) {
+                console.error(`Merge exited with ${code}${cookiesPath ? ' (check cookies file path and validity)' : ''}:`, mergeStderr);
                 if (!res.headersSent) {
-                  const msg = 'yt-dlp/ffmpeg exited with error' + (cookiesPath ? ' (check cookies file path and validity)' : '');
-                  return res.status(502).json({ error: 'Merge failed', message: msg });
+                  const { status, error, message } = videoProcessor.describeYtdlpError(mergeStderr);
+                  return res.status(status).json({ error, message });
                 }
               }
               res.end();
@@ -425,7 +420,9 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
 
         upstreamReq.on('error', (err) => {
           if (!res.headersSent) {
-            res.status(502).json({ error: 'Upstream fetch failed', message: err.message });
+            console.error('Upstream fetch error:', err.message);
+            const { status, error, message } = videoProcessor.describeUpstreamError(err);
+            res.status(status).json({ error, message });
           } else {
             res.end();
           }
