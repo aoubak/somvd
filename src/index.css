@@ -1,105 +1,79 @@
-/* Import Google Fonts Outfit */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap');
-
 @import "tailwindcss";
 
-/* Apply Outfit font globally */
-body {
-  font-family: 'Outfit', sans-serif;
-  background-color: #18181b;
-  color: #3b82f6;
-}
+/* SOMVD "Studio Noir" design tokens: every color, font and animation in the UI comes from here */
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-/* Custom animations for login page */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
-}
+  --color-canvas: #09090b;
+  --color-surface: #111113;
+  --color-raised: #17171a;
+  --color-line: rgb(255 255 255 / 0.07);
+  --color-line-strong: rgb(255 255 255 / 0.12);
+  --color-ink: #ededef;
+  --color-ink-2: #a1a1aa;
+  --color-ink-3: #8b8b93;
+  --color-ink-4: #7c7c85;
+  --color-lime: #c6f432;
+  --color-lime-ink: #0a0a0b;
+  --color-danger: #ff7a7a;
 
-@keyframes glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(147, 51, 234, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(147, 51, 234, 0.6);
-  }
-}
+  --animate-indeterminate: indeterminate 1.2s ease-in-out infinite;
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  @keyframes indeterminate {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(300%); }
   }
 }
 
-@keyframes pulse-slow {
-  0%, 100% {
-    opacity: 0.7;
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-canvas);
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
   }
-  50% {
-    opacity: 1;
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background-color: rgb(198 244 50 / 0.25);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-lime);
+    outline-offset: 2px;
   }
 }
 
-.animation-delay-2000 {
-  animation-delay: 2s;
+/* Mono uppercase label above section titles */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-4);
 }
 
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 
-/* Login page specific styles */
-.login-card {
-  animation: slideIn 0.8s ease-out;
-}
-
-.login-icon {
-  animation: float 3s ease-in-out infinite;
-}
-
-.login-button {
-  position: relative;
-  overflow: hidden;
-}
-
-.login-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.login-button:hover::before {
-  left: 100%;
-}
-
-/* Input focus effects */
-.login-input:focus {
-  animation: glow 2s ease-in-out infinite;
-}
-
-/* Background blob animations */
-.bg-blob {
-  animation: pulse-slow 4s ease-in-out infinite;
-}
-
-.bg-blob:nth-child(2) {
-  animation-delay: 1s;
-}
-
-.bg-blob:nth-child(3) {
-  animation-delay: 2s;
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
