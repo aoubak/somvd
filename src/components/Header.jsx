@@ -1,91 +1,66 @@
-import React from 'react'
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { LuMenu, LuX } from 'react-icons/lu';
+import Container from './ui/Container';
+import Logo from './ui/Logo';
+
+const NAV = [
+  { to: '/#how', label: 'How it works' },
+  { to: '/#features', label: 'Features' },
+  { to: '/#faq', label: 'FAQ' }
+];
 
 export default function Header() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const solid = scrolled || open;
 
   return (
-    <header className="fixed z-50  w-full top-0 left-0 bg-gray-900/45 shadow-gray-600 shadow backdrop-blur-2xl text-white font-outfit">
-      <nav className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
-        {/* Logo */}
-        <Link to="/" className="text-white text-2xl font-bold">SOMVD</Link>
+    <header className={`sticky top-0 z-50 border-b backdrop-blur-xl transition-colors duration-200 ${solid ? 'border-line bg-canvas/80' : 'border-transparent bg-canvas/0'}`}>
+      <Container className="flex h-14 items-center justify-between gap-6">
+        <Logo />
 
-        {/* Desktop Links */}
-        <ul className="hidden md:flex py-2 rounded-md px-3 border  backdrop-blur-2xl border-gray-700  space-x-8 items-center">
-          <li>
-            <Link to="/" className="hover:text-gray-300 transition">
-              Home
-            </Link>
-          </li>
-          <li>
-            <Link to="/features" className="hover:text-gray-300 transition">
-              Features
-            </Link>
-          </li>
+        <nav aria-label="Main" className="hidden items-center gap-7 text-[13px] text-ink-3 md:flex">
+          {NAV.map(item => (
+            <Link key={item.to} to={item.to} className="transition-colors hover:text-ink">{item.label}</Link>
+          ))}
+        </nav>
 
-          <li>
-            <Link to="/donate" className="hover:text-gray-300 transition">
-              Donate
-            </Link>
-          </li>
-
-        </ul>
-
-        {/* links In Disktop */}
-        <div className='hidden md:flex space-x-6 items-center list-none'>
-          <li>
-            <Link to="/login" className="hover:text-gray-300 transition">
-              Login
-            </Link>
-          </li>
-          <li>
-            <button className="bg-blue-500 text-gray-300 px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold border border-blue-500">
-              Download
-            </button>
-          </li>
-        </div>
+        <span className="hidden rounded-full border border-line-strong px-2.5 py-1 font-mono text-[11px] text-ink-3 md:inline-flex">
+          Free · No sign-up
+        </span>
 
         <button
-          className="md:hidden text-blue-500 focus:outline-none"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
+          type="button"
+          className="-mr-2 grid size-10 place-items-center rounded-lg text-ink-2 hover:bg-raised hover:text-ink md:hidden"
+          aria-expanded={open}
+          aria-controls="mobile-nav"
+          aria-label={open ? 'Close menu' : 'Open menu'}
+          onClick={() => setOpen(o => !o)}
         >
-          <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M4 7h20M4 14h20M4 21h20" />
-          </svg>
+          {open ? <LuX className="size-5" aria-hidden="true" /> : <LuMenu className="size-5" aria-hidden="true" />}
         </button>
-      </nav>
+      </Container>
 
-      {/* Mobile Menu */}
-      {menuOpen && (
-        <div className="md:hidden bg-gray-800/45 backdrop-blur-2xl px-4 py-2">
-          <ul className="space-y-2">
-            <li>
-              <Link to="/" className="hover:text-gray-300 transition">
-                Home
+      {open && (
+        <nav id="mobile-nav" aria-label="Main" className="border-t border-line md:hidden">
+          <Container className="flex flex-col py-2">
+            {NAV.map(item => (
+              <Link key={item.to} to={item.to} onClick={() => setOpen(false)} className="py-3 text-[15px] text-ink-2 hover:text-ink">
+                {item.label}
               </Link>
-            </li>
-            <li>
-              <Link to="/features" className="hover:text-gray-300 transition">
-                Features
-              </Link>
-            </li>
-
-            <li>
-              <Link to="/donate" className="hover:text-gray-300 transition">
-                Donate
-              </Link>
-            </li>
-            <li><Link to="/login" className="block hover:text-white transition">Login</Link></li>
-            <li>
-              <button className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition font-semibold border border-blue-500">
-                Download
-              </button>
-            </li>
-          </ul>
-        </div>
+            ))}
+          </Container>
+        </nav>
       )}
     </header>
-  )
+  );
 }

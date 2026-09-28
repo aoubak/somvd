@@ -1,38 +1,37 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import '@fontsource-variable/geist'
 import '@fontsource-variable/geist-mono'
 import './index.css'
 import App from './App.jsx'
-import { createBrowserRouter } from 'react-router-dom'
 import Home from './pages/Home.jsx'
-import Features from './pages/Features.jsx'
-import Pricing from './pages/Pricing.jsx'
-import Donate from './pages/Donate.jsx'
-import Login from './pages/Login.jsx'
-import Signup from './pages/Signup.jsx'
-import { RouterProvider } from 'react-router-dom'
+import NotFound from './pages/NotFound.jsx'
 import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 import Terms from './pages/Terms.jsx'
 
+// Login, Signup, Pricing and Donate stay on disk but are not routed until they work end to end
 const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
-    children:[
-      {index: true, element: <Home />},
-      {path: '/features', element: <Features />},
-      {path: '/pricing', element: <Pricing />},
-      {path: '/donate', element: <Donate />},
-      {path: '/login', element: <Login />},
-      {path: '/signup', element: <Signup />},
-      {path: '/privacyPolicy', element: <PrivacyPolicy />},
-      {path: '/terms', element: <Terms />},
-    ],
-
-    
+    children: [
+      {
+        // Pathless route so errors render inside the header/footer layout
+        errorElement: <NotFound />,
+        children: [
+          { index: true, element: <Home /> },
+          { path: 'terms', element: <Terms /> },
+          { path: 'privacy', element: <PrivacyPolicy /> },
+          // Old URLs
+          { path: 'privacyPolicy', element: <Navigate to="/privacy" replace /> },
+          { path: 'features', element: <Navigate to="/#features" replace /> },
+          { path: '*', element: <NotFound /> }
+        ]
+      }
+    ]
   }
-], {basename: '/somvdapp'})
+], { basename: '/somvdapp' })
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

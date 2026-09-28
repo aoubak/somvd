@@ -1,35 +1,19 @@
-import React from 'react'
-import { FaRegFileVideo } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
+import Container from './ui/Container';
+import Logo from './ui/Logo';
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-950 text-gray-300 pt-8 pb-4 px-4">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between">
-        {/* Logo and name */}
-        <div className="flex items-center gap-3 mb-4 md:mb-0">
-          <span className="bg-white text-blue-500 rounded-lg p-2">
-            <FaRegFileVideo size={28} />
-          </span>
-          <span className="font-semibold text-white text-lg">SOMVD</span>
-        </div>
-        {/* Links */}
-        <ul className="flex gap-8 text-sm">
-          <li>
-            <Link to="/terms" className="hover:text-blue-500 transition">Terms of Service</Link>
-          </li>
-          <li>
-            <Link to="/privacyPolicy" className="hover:text-blue-500 transition">Privacy Policy</Link>
-          </li>
-          <li>
-            <a href="#" className="hover:text-blue-500 transition">Contact Us</a>
-          </li>
-        </ul>
-      </div>
-      <hr className="border-gray-800 my-4" />
-      <div className="text-center text-xs text-gray-500">
-        © 2025 SOMVD. All rights reserved.
-      </div>
+    <footer className="border-t border-line">
+      <Container className="flex flex-col gap-6 py-8 text-[13px] text-ink-3 sm:flex-row sm:items-center sm:justify-between">
+        <Logo />
+        <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
+          <Link to="/terms" className="transition-colors hover:text-ink">Terms</Link>
+          <Link to="/privacy" className="transition-colors hover:text-ink">Privacy</Link>
+          <a href="mailto:support@somvdapp.com" className="transition-colors hover:text-ink">support@somvdapp.com</a>
+        </nav>
+        <p className="font-mono text-[11px] text-ink-4">© {new Date().getFullYear()} SOMVD</p>
+      </Container>
     </footer>
-  )
+  );
 }
