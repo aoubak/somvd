@@ -1,220 +1,48 @@
-import React, { useState } from 'react';
-import {
-  FaCheckCircle, FaTimesCircle, FaVideo, FaUserAltSlash, FaFileVideo,
-  FaMobileAlt, FaExclamationTriangle, FaShieldAlt, FaRedo, FaLock, FaUserAstronaut,
-  FaCheck, FaTimes, FaList, FaDesktop, FaGavel, FaExclamationCircle,
-  FaBan, FaCode, FaArrowRight
-} from 'react-icons/fa';
+import { LuPlus } from 'react-icons/lu';
+import Container from './ui/Container';
+import SectionHeader from './ui/SectionHeader';
+import TextLink from './ui/TextLink';
 
-const faqs = [
+const FAQS = [
+  { q: 'Is SOMVD free?', a: 'Yes. There are no fees, no ads and no premium tier.' },
+  { q: 'Do I need an account?', a: 'No. Paste a link and download. There is nothing to sign up for.' },
+  { q: 'Do you store my videos?', a: 'No. Files stream from the platform through our server straight to your device and are never written to our disk.' },
+  { q: 'Which platforms work?', a: 'YouTube, TikTok, Instagram, Facebook and X (Twitter). Public videos only.' },
+  { q: 'Why is a quality missing?', a: "We only list what the platform offers for that video. If it was uploaded in 720p, there's no 1080p to download." },
+  { q: "Why don't I see an audio option?", a: 'Some videos come without a separate audio track. Download the video instead.' },
+  { q: 'Can I download private videos?', a: "No. Private, age-restricted and login-only videos can't be fetched." },
   {
-    question: 'Is SOMVD free to use?',
-    icon: <FaCheckCircle className="text-green-400" size={22} />,
-    answer: (
-      <div className="flex items-start gap-3">
-        <FaCheck className="text-green-400 text-lg mt-1 flex-shrink-0" />
-        <span>Yes. SOMVD is 100% free with no hidden charges, no ads, and no premium plans.</span>
-      </div>
-    ),
-  },
-  {
-    question: 'Do I need to create an account or log in?',
-    icon: <FaTimesCircle className="text-red-400" size={22} />,
-    answer: (
-      <div className="flex items-start gap-3">
-        <FaTimes className="text-red-400 text-lg mt-1 flex-shrink-0" />
-        <span>No. You don't need to register. Just paste your video link and download.</span>
-      </div>
-    ),
-  },
-  {
-    question: 'Which platforms are supported?',
-    icon: <FaVideo className="text-blue-400" size={22} />,
-    answer: (
-      <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <FaVideo className="text-blue-400 text-lg mt-1 flex-shrink-0" />
-          <span>SOMVD supports popular platforms like:</span>
-        </div>
-        <div className="ml-8 space-y-2">
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-blue-400 text-sm" />
-            <span>YouTube</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-blue-400 text-sm" />
-            <span>Facebook</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-blue-400 text-sm" />
-            <span>Instagram</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-blue-400 text-sm" />
-            <span>TikTok</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-blue-400 text-sm" />
-            <span>Twitter (X)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-blue-400 text-sm" />
-            <span>And many more…</span>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    question: 'What video formats are available?',
-    icon: <FaFileVideo className="text-yellow-400" size={22} />,
-    answer: (
-      <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <FaFileVideo className="text-yellow-400 text-lg mt-1 flex-shrink-0" />
-          <span>You can download in multiple formats depending on availability:</span>
-        </div>
-        <div className="ml-8 space-y-2">
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-yellow-400 text-sm" />
-            <span>MP4 (360p, 720p, 1080p, sometimes 4K)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-yellow-400 text-sm" />
-            <span>MP3 (audio only)</span>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    question: 'Does SOMVD work on mobile and desktop?',
-    icon: <FaMobileAlt className="text-blue-400" size={22} />,
-    answer: (
-      <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <FaCheck className="text-green-400 text-lg mt-1 flex-shrink-0" />
-          <span>Yes. SOMVD is a web app, so it works on:</span>
-        </div>
-        <div className="ml-8 space-y-2">
-          <div className="flex items-center gap-2">
-            <FaMobileAlt className="text-blue-400 text-sm" />
-            <span>Android & iOS phones (via browser)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaDesktop className="text-blue-400 text-sm" />
-            <span>Windows, macOS, and Linux PCs</span>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    question: 'Is downloading videos legal?',
-    icon: <FaExclamationTriangle className="text-orange-400" size={22} />,
-    answer: (
-      <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <FaExclamationCircle className="text-orange-400 text-lg mt-1 flex-shrink-0" />
-          <span>SOMVD is a tool for personal use only.</span>
-        </div>
-        <div className="flex items-start gap-3">
-          <FaGavel className="text-orange-400 text-lg mt-1 flex-shrink-0" />
-          <span>Please respect the copyright laws of your country and the terms of each platform.</span>
-        </div>
-      </div>
-    ),
-  },
-  {
-    question: 'Is SOMVD safe?',
-    icon: <FaShieldAlt className="text-green-400" size={22} />,
-    answer: (
-      <div className="flex items-start gap-3">
-        <FaCheck className="text-green-400 text-lg mt-1 flex-shrink-0" />
-        <span>Yes. We don't store your videos, history, or personal information. Downloads happen directly from the source.</span>
-      </div>
-    ),
-  },
-  {
-    question: 'Why is my download not working?',
-    icon: <FaRedo className="text-red-400" size={22} />,
-    answer: (
-      <div className="space-y-3">
-        <div className="flex items-start gap-3">
-          <FaTimes className="text-red-400 text-lg mt-1 flex-shrink-0" />
-          <span>Sometimes platforms change their systems. If you face issues:</span>
-        </div>
-        <div className="ml-8 space-y-2">
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-red-400 text-sm" />
-            <span>Refresh the page</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-red-400 text-sm" />
-            <span>Try again later</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FaArrowRight className="text-red-400 text-sm" />
-            <span>Contact us if the problem continues</span>
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    question: 'Can I download private or paid videos?',
-    icon: <FaLock className="text-red-400" size={22} />,
-    answer: (
-      <div className="flex items-start gap-3">
-        <FaBan className="text-red-400 text-lg mt-1 flex-shrink-0" />
-        <span>No. SOMVD only supports publicly available content.</span>
-      </div>
-    ),
-  },
-  {
-    question: 'Who created SOMVD?',
-    icon: <FaUserAstronaut className="text-blue-400" size={22} />,
-    answer: (
-      <div className="flex items-start gap-3">
-        <FaCode className="text-blue-400 text-lg mt-1 flex-shrink-0" />
-        <span>SOMVD was built as a non-profit project to help people download videos easily, without ads or restrictions — inspired by open-source projects like VLC Player.</span>
-      </div>
-    ),
-  },
+    q: 'Is it legal?',
+    a: (
+      <>
+        Downloading is fine for your own videos, openly licensed content, or anything you have permission to save. Respect copyright and each platform's terms. See our <TextLink to="/terms">Terms of Service</TextLink>.
+      </>
+    )
+  }
 ];
 
 export default function FAQ() {
-  const [openIndex, setOpenIndex] = useState(null);
-
-  const toggle = idx => setOpenIndex(openIndex === idx ? null : idx);
-
   return (
-    <section className="bg-gray-900 text-blue-500 py-16 px-4">
-      <div className="max-w-3xl mx-auto text-center mb-10">
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Frequently Asked Questions</h2>
-        <p className="text-gray-300">Find answers to common questions about SOMVD.</p>
-      </div>
-      <div className="max-w-6xl bg-amber-00 mx-auto">
-        {faqs.map((faq, idx) => (
-          <div key={idx} className="mb-4">
-            <button
-              className="w-full flex items-center justify-between bg-gray-800 rounded-lg px-5 py-4 text-left focus:outline-none hover:bg-gray-700 transition"
-              onClick={() => toggle(idx)}
-            >
-              <span className="flex items-center gap-3 text-white text-lg font-semibold">
-                {faq.icon}
-                {faq.question}
-              </span>
-              <span className="text-blue-400 text-xl">{openIndex === idx ? '-' : '+'}</span>
-            </button>
-            {openIndex === idx && (
-              <div className="bg-gray-950  text-gray-300 px-5 py-4 rounded-b-lg border-t border-blue-900">
-                {faq.answer}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+    <section id="faq" aria-labelledby="faq-title" className="py-20 sm:py-28">
+      <Container className="grid gap-10 lg:grid-cols-[1fr_1.5fr] lg:gap-16">
+        <div>
+          <SectionHeader id="faq-title" eyebrow="FAQ" title="Questions," muted="answered." />
+          <p className="mt-4 text-[14px] text-ink-3">
+            Still stuck? <TextLink href="mailto:support@somvdapp.com">support@somvdapp.com</TextLink>
+          </p>
+        </div>
+        <div className="divide-y divide-line border-y border-line">
+          {FAQS.map(({ q, a }, i) => (
+            <details key={q} className="group" open={i === 0}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-[15px] text-ink [&::-webkit-details-marker]:hidden">
+                {q}
+                <LuPlus className="size-4 shrink-0 text-ink-4 transition-transform duration-200 group-open:rotate-45" aria-hidden="true" />
+              </summary>
+              <p className="pb-5 pr-8 text-[14px] leading-relaxed text-ink-3">{a}</p>
+            </details>
+          ))}
+        </div>
+      </Container>
     </section>
   );
 }

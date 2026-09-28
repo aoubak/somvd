@@ -1,20 +1,19 @@
-import React from 'react'
-import Hero from '../components/Hero'
-import SupPlatforms from '../components/SupPlatforms'
-import HowWorks from '../components/HowWorks'
-import Statistics from '../components/Statistics'
+import ClosingCta from '../components/ClosingCta'
+import Facts from '../components/Facts'
 import FAQ from '../components/FAQ'
-import Contact from '../components/Contact'
+import Features from '../components/Features'
+import Hero from '../components/Hero'
+import HowItWorks from '../components/HowItWorks'
 
 export default function Home() {
   return (
-    <section className='bg-gray-900 text-blue-500 pt-12 md:px-0'>
+    <>
       <Hero />
-      {/* <SupPlatforms /> */}
-      <HowWorks />
-      <Statistics />
+      <HowItWorks />
+      <Features />
+      <Facts />
       <FAQ />
-      <Contact />
-    </section>
+      <ClosingCta />
+    </>
   )
 }
