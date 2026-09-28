@@ -23,7 +23,9 @@ app.use(cors({
   origin: process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : ['http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  // Lets the frontend read the download filename from cross-origin /stream responses
+  exposedHeaders: ['Content-Disposition']
 }));
 
 // Rate limiting
