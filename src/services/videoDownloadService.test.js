@@ -126,3 +126,25 @@ describe('getVideoInfo', () => {
     await expect(service.getVideoInfo(info.originalUrl)).rejects.toThrow('Request failed (502)');
   });
 });
+
+describe('validateUrl', () => {
+  afterEach(() => { service.allowAllSites = false; });
+
+  it('accepts only the listed platforms by default', () => {
+    expect(service.validateUrl('https://youtu.be/jNQXAC9IVRw')).toBe(true);
+    expect(service.validateUrl('https://vimeo.com/76979871')).toBe(false);
+  });
+
+  it('accepts any http(s) link in personal mode', () => {
+    service.allowAllSites = true;
+    expect(service.validateUrl('https://vimeo.com/76979871')).toBe(true);
+    expect(service.validateUrl('ftp://vimeo.com/76979871')).toBe(false);
+    expect(service.validateUrl('vimeo')).toBe(false);
+  });
+});
+
+describe('baseURL', () => {
+  it('defaults to the local backend while developing', () => {
+    expect(service.baseURL).toBe('http://localhost:3002/api');
+  });
+});

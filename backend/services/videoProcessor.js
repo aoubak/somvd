@@ -1,5 +1,8 @@
 const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const facebookStory = require('./facebookStory');
 
 // Heights offered to users, best first; `${height}p` is also the /stream quality value
 const QUALITY_HEIGHTS = [2160, 1440, 1080, 720, 480, 360, 240];
@@ -8,6 +11,9 @@ class VideoProcessor {
   constructor() {
     // Values accepted by GET /stream?quality=
     this.streamQualities = [...QUALITY_HEIGHTS.map(h => `${h}p`), 'best', 'audio'];
+
+    // Picked up automatically when present, so a personal install needs no configuration
+    this.defaultCookiesFile = path.join(__dirname, '..', 'cookies.txt');
 
     // `hosts` is checked against the parsed hostname (subdomains allowed) before any pattern runs
     this.supportedPlatforms = {
@@ -47,7 +53,9 @@ class VideoProcessor {
           /(?:facebook\.com|m\.facebook\.com)\/reel\/([A-Za-z0-9._-]+)/,
           /(?:facebook\.com|m\.facebook\.com)\/reels\/([A-Za-z0-9._-]+)/,
           /(?:facebook\.com|m\.facebook\.com)\/share\/r\/([A-Za-z0-9._-]+)/,
-          /facebook\.com\/share\/v\/([A-Za-z0-9._-]+)/
+          /facebook\.com\/share\/v\/([A-Za-z0-9._-]+)/,
+          // Stories need the user's own login cookies (see facebookStory.js)
+          /facebook\.com\/stories\/(\d+)/
         ],
         icon: '👥'
       },
@@ -79,12 +87,26 @@ class VideoProcessor {
         return { key, ...platform };
       }
     }
+    // Personal mode hands any other http(s) link to yt-dlp, which supports many more sites
+    if (this.personalMode()) return { key: 'other', name: 'Web', icon: '🌐' };
     return null;
+  }
+
+  // PERSONAL_MODE=true is for a private, single-user install: every site, no rate limits
+  personalMode() {
+    return process.env.PERSONAL_MODE === 'true';
   }
 
   // Validate URL
   validateUrl(url) {
     return this.detectPlatform(url) !== null;
+  }
+
+  // Netscape cookies.txt with the user's own logins, for private videos and stories
+  cookiesFile() {
+    const configured = process.env.YTDLP_COOKIES || process.env.COOKIES_FILE;
+    if (configured) return configured;
+    return fs.existsSync(this.defaultCookiesFile) ? this.defaultCookiesFile : null;
   }
 
   // Every yt-dlp call starts here. Current yt-dlp needs a JavaScript runtime for full YouTube
@@ -93,6 +115,13 @@ class VideoProcessor {
     const runtimes = process.env.YTDLP_JS_RUNTIMES ?? 'node';
     const base = ['-m', 'yt_dlp'];
     if (runtimes && runtimes !== 'off') base.push('--js-runtimes', runtimes);
+
+    // Optional login for private videos: a Netscape cookies.txt, or a browser to read cookies from
+    const cookiesFile = this.cookiesFile();
+    const cookiesBrowser = process.env.YTDLP_COOKIES_FROM_BROWSER;
+    if (cookiesFile) base.push('--cookies', cookiesFile);
+    else if (cookiesBrowser) base.push('--cookies-from-browser', cookiesBrowser);
+
     return [...base, ...args];
   }
 
@@ -106,11 +135,14 @@ class VideoProcessor {
     if (/Requested format is not available/i.test(stderr)) {
       return { status: 422, error: 'Format not available', message: 'No matching stream is available at the requested quality.' };
     }
-    if (/Login required|private video|This video is private|Sign in/i.test(stderr)) {
+    if (/Login required|logged-in|--cookies|private video|This video is private|Sign in/i.test(stderr)) {
       return { status: 451, error: 'Unavailable', message: 'This video is private or requires login.' };
     }
     if (/not available|unavailable|removed/i.test(stderr)) {
       return { status: 404, error: 'Not found', message: 'The video is unavailable or was removed.' };
+    }
+    if (/Unsupported URL/i.test(stderr)) {
+      return { status: 422, error: 'Unsupported link', message: "This page has no video we can download. Stories and some private pages aren't supported." };
     }
     return { status: 502, error: 'Upstream error', message: "We couldn't get this video from the platform right now. Please try again in a moment." };
   }
@@ -121,6 +153,17 @@ class VideoProcessor {
       return { status: 504, error: 'Upstream timeout', message: 'The video source took too long to respond. Please try again.' };
     }
     return { status: 502, error: 'Upstream fetch failed', message: "Couldn't reach the video source. Please try again." };
+  }
+
+  // Where a 3xx answer from the video source points, or null when there is nothing to follow
+  redirectTarget(statusCode, headers, currentUrl) {
+    if (statusCode < 300 || statusCode >= 400 || !headers?.location) return null;
+    try {
+      const next = new URL(headers.location, currentUrl);
+      return next.protocol === 'http:' || next.protocol === 'https:' ? next.toString() : null;
+    } catch {
+      return null;
+    }
   }
 
   // Best audio-only format that can be proxied directly; prefers m4a, then highest bitrate
@@ -139,16 +182,29 @@ class VideoProcessor {
     return audioOnly[0] || null;
   }
 
+  // Facebook stories are read by our own reader; everything else goes through yt-dlp
+  isFacebookStory(url) {
+    return facebookStory.isStoryUrl(url);
+  }
+
+  // Story details in the same shape as `yt-dlp --dump-json`
+  resolveFacebookStory(url) {
+    return facebookStory.resolve(url, { cookiesFile: this.cookiesFile() });
+  }
+
   // Get video information using yt-dlp
   async getVideoInfo(url) {
+    const platform = this.detectPlatform(url);
+    if (!platform) throw new Error('Unsupported platform');
+
+    if (this.isFacebookStory(url)) {
+      return this.processVideoInfo(await this.resolveFacebookStory(url), platform);
+    }
+
     return new Promise((resolve, reject) => {
-      const platform = this.detectPlatform(url);
-      if (!platform) {
-        return reject(new Error('Unsupported platform'));
-      }
 
       // yt-dlp command to get video info
-      const ytdlp = spawn('python', this.ytdlpArgs('--dump-json', '--no-download', '--no-warnings', url));
+      const ytdlp = spawn('python', this.ytdlpArgs('--dump-json', '--no-download', '--no-warnings', '--no-playlist', '--playlist-items', '1', url));
 
       let stdout = '';
       let stderr = '';
@@ -164,7 +220,7 @@ class VideoProcessor {
       ytdlp.on('close', (code) => {
         if (code !== 0) {
           console.error('yt-dlp error:', stderr);
-          return reject(new Error('Failed to get video information'));
+          return reject(Object.assign(new Error('Failed to get video information'), { stderr }));
         }
 
         try {
@@ -195,7 +251,7 @@ class VideoProcessor {
       id: videoId,
       originalId: rawData.id,
       title: this.sanitizeTitle(rawData.title || 'Unknown Title'),
-      platform: platform.name,
+      platform: platform.key === 'other' ? (rawData.extractor_key || platform.name) : platform.name,
       duration: this.formatDuration(rawData.duration),
       thumbnail: rawData.thumbnail || null,
       uploader: rawData.uploader || 'Unknown',

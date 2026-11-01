@@ -34,7 +34,7 @@ export default function VideoDownloader() {
   const selectedFormat = state.info?.formats.find(f => f.id === state.formatId) ?? null;
 
   return (
-    <div className="mx-auto w-full max-w-2xl text-left">
+    <div className="w-full max-w-2xl text-left">
       <UrlForm
         inputRef={inputRef}
         url={state.url}

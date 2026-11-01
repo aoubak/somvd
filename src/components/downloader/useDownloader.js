@@ -2,7 +2,9 @@ import { useCallback, useEffect, useReducer, useRef } from 'react';
 import videoDownloadService from '../../services/videoDownloadService';
 import { downloaderReducer, initialState } from './downloaderReducer';
 
-const UNSUPPORTED_MESSAGE = "That link isn't from a supported platform. Try YouTube, TikTok, Instagram, Facebook or X.";
+const UNSUPPORTED_MESSAGE = videoDownloadService.allowAllSites
+  ? "That doesn't look like a link. Paste the full address, starting with https://"
+  : "That link isn't from a supported platform. Try YouTube, TikTok, Instagram, Facebook or X.";
 
 export function useDownloader() {
   const [state, dispatch] = useReducer(downloaderReducer, initialState);

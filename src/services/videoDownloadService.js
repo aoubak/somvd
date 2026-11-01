@@ -32,7 +32,10 @@ function saveBlob(blob, filename) {
 
 class VideoDownloadService {
   constructor() {
-    this.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+    // The built app is served by the backend itself (start.bat), so it calls its own origin
+    this.baseURL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3002/api');
+    // Personal builds accept any link; the backend (PERSONAL_MODE) passes it to yt-dlp
+    this.allowAllSites = import.meta.env.VITE_PERSONAL_MODE === 'true';
   }
 
   // Detect platform from URL for UI feedback (backend does the authoritative check)
@@ -52,7 +55,8 @@ class VideoDownloadService {
 
   // Validate URL format (basic validation - backend will do thorough validation)
   validateUrl(url) {
-    return this.detectPlatform(url) !== null;
+    if (this.detectPlatform(url) !== null) return true;
+    return this.allowAllSites && /^https?:\/\/\S+\.\S+$/i.test((url || '').trim());
   }
 
   // Default platform list, used until the backend responds

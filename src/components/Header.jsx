@@ -21,6 +21,13 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event) => { if (event.key === 'Escape') setOpen(false); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
   const solid = scrolled || open;
 
   return (
@@ -50,16 +57,20 @@ export default function Header() {
         </button>
       </Container>
 
+      {/* Floats over the page instead of pushing it down; tap outside or press Escape to close */}
       {open && (
-        <nav id="mobile-nav" aria-label="Main" className="border-t border-line md:hidden">
-          <Container className="flex flex-col py-2">
-            {NAV.map(item => (
-              <Link key={item.to} to={item.to} onClick={() => setOpen(false)} className="py-3 text-[15px] text-ink-2 hover:text-ink">
-                {item.label}
-              </Link>
-            ))}
-          </Container>
-        </nav>
+        <>
+          <div aria-hidden="true" className="absolute inset-x-0 top-full h-dvh bg-black/60 md:hidden" onClick={() => setOpen(false)} />
+          <nav id="mobile-nav" aria-label="Main" className="absolute inset-x-0 top-full border-y border-line bg-canvas shadow-[0_24px_48px_rgb(0_0_0/0.5)] md:hidden">
+            <Container className="flex flex-col py-2">
+              {NAV.map(item => (
+                <Link key={item.to} to={item.to} onClick={() => setOpen(false)} className="py-3 text-[15px] text-ink-2 hover:text-ink">
+                  {item.label}
+                </Link>
+              ))}
+            </Container>
+          </nav>
+        </>
       )}
     </header>
   );

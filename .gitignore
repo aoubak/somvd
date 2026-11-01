@@ -32,6 +32,10 @@ backend/temp/
 .env.*
 !.env.example
 
+# Login cookies for yt-dlp: never commit these
+cookies.txt
+*cookies*.txt
+
 # Build outputs
 build/
 out/

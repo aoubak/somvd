@@ -90,6 +90,17 @@ router.post('/info', validateUrl, handleValidationErrors, async (req, res) => {
       });
     }
     
+    // Our own readers attach the response to send
+    if (error.response) {
+      return res.status(error.response.status).json({ error: error.response.error, message: error.response.message });
+    }
+
+    // yt-dlp ran and failed: say why when we recognise the reason
+    if (error.stderr && videoProcessor.describeYtdlpError(error.stderr).status !== 502) {
+      const { status, error: title, message } = videoProcessor.describeYtdlpError(error.stderr);
+      return res.status(status).json({ error: title, message });
+    }
+
     if (error.message.includes('Failed to get video information')) {
       return res.status(404).json({
         error: 'Video not found',
@@ -132,13 +143,23 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
       });
     }
 
+    // Facebook stories come from our own reader, already in yt-dlp's shape
+    if (videoProcessor.isFacebookStory(url)) {
+      try {
+        return serveInfo(await videoProcessor.resolveFacebookStory(url));
+      } catch (error) {
+        if (!error.response) throw error;
+        return res.status(error.response.status).json({ error: error.response.error, message: error.response.message });
+      }
+    }
+
     // Resolve media info via yt-dlp (no download)
-    const cookiesPath = process.env.YTDLP_COOKIES || process.env.COOKIES_FILE;
     const ytdlpArgs = videoProcessor.ytdlpArgs(
       '--dump-json',
       '--no-download',
       '--no-warnings',
-      ...(cookiesPath ? ['--cookies', cookiesPath] : []),
+      '--no-playlist',
+      '--playlist-items', '1',
       url
     );
 
@@ -160,15 +181,26 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
 
     ytdlp.on('close', () => {
       if (res.headersSent) return;
-      try {
-        if (!stdout) {
-          // Map yt-dlp errors to a readable sentence; keep the raw output in the server log
-          console.error('Stream resolve error:', stderr);
-          const { status, error, message } = videoProcessor.describeYtdlpError(stderr);
-          return res.status(status).json({ error, message });
-        }
+      if (!stdout) {
+        // Map yt-dlp errors to a readable sentence; keep the raw output in the server log
+        console.error('Stream resolve error:', stderr);
+        const { status, error, message } = videoProcessor.describeYtdlpError(stderr);
+        return res.status(status).json({ error, message });
+      }
 
-        const info = JSON.parse(stdout);
+      let info;
+      try {
+        info = JSON.parse(stdout);
+      } catch (e) {
+        console.error('Stream resolve parse error:', e, stderr);
+        return res.status(500).json({ error: 'Processing failed', message: 'Failed to resolve media formats' });
+      }
+      serveInfo(info);
+    });
+
+    // Pick the format for the requested quality and send it (direct proxy, or merge with FFmpeg)
+    function serveInfo(info) {
+      try {
         const formats = Array.isArray(info.formats) ? info.formats : [];
 
         // Map quality like '720p' to numeric height ('best' and 'audio' have none)
@@ -253,7 +285,7 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
               // yt-dlp writes MPEG-TS to stdout by default; ask ffmpeg for fragmented MP4 instead
               '--downloader-args', 'ffmpeg_o:-f mp4 -movflags +frag_keyframe+empty_moov+default_base_moof',
               ...(process.env.FFMPEG_PATH ? ['--ffmpeg-location', process.env.FFMPEG_PATH] : []),
-              ...(cookiesPath ? ['--cookies', cookiesPath] : []),
+              '--playlist-items', '1',
               '-o', '-',
               url
             );
@@ -288,7 +320,7 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
 
             ytdlpMerge.on('close', (code) => {
               if (code !== 0) {
-                console.error(`Merge exited with ${code}${cookiesPath ? ' (check cookies file path and validity)' : ''}:`, mergeStderr);
+                console.error(`Merge exited with ${code}:`, mergeStderr);
                 if (!res.headersSent) {
                   const { status, error, message } = videoProcessor.describeYtdlpError(mergeStderr);
                   return res.status(status).json({ error, message });
@@ -316,8 +348,6 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
         const filename = `${filenameBase}.${ext}`;
 
         // Proxy stream from origin to client with Range support
-        const directUrl = selected.url;
-        const upstream = new URL(directUrl);
         const clientRange = req.headers['range'];
 
         const headers = {
@@ -339,6 +369,18 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
           }
         }
 
+        // Abort the current upstream request if the client disconnects
+        let upstreamReq = null;
+        req.on('close', () => {
+          if (upstreamReq && !upstreamReq.destroyed) {
+            console.warn('Client disconnected, aborting upstream request');
+            upstreamReq.destroy();
+          }
+        });
+
+        // Video hosts sometimes answer with a redirect to another server; follow a few of them
+        const requestUpstream = (targetUrl, redirectsLeft) => {
+        const upstream = new URL(targetUrl);
         const requestOptions = {
           method: req.method === 'HEAD' ? 'HEAD' : 'GET',
           protocol: upstream.protocol,
@@ -350,10 +392,22 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
 
         const client = upstream.protocol === 'https:' ? https : http;
 
-        const upstreamReq = client.request(requestOptions, (upstreamRes) => {
+        upstreamReq = client.request(requestOptions, (upstreamRes) => {
           const startedAt = Date.now();
           let bytesProxied = 0;
           const statusCode = upstreamRes.statusCode || (clientRange ? 206 : 200);
+
+          const nextUrl = videoProcessor.redirectTarget(statusCode, upstreamRes.headers, targetUrl);
+          if (nextUrl && redirectsLeft > 0) {
+            upstreamRes.resume();
+            return requestUpstream(nextUrl, redirectsLeft - 1);
+          }
+          // A redirect we cannot follow is a failure, not something to pass to the browser
+          if (statusCode >= 300 && statusCode < 400) {
+            upstreamRes.resume();
+            console.error(`Upstream redirect not followed (${statusCode})`);
+            return res.status(502).json({ error: 'Upstream fetch failed', message: "Couldn't reach the video source. Please try again." });
+          }
 
           // If origin responded with error, return JSON error (don’t pipe binary)
           if (statusCode >= 400) {
@@ -414,8 +468,9 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
           upstreamRes.pipe(res);
         });
 
-        upstreamReq.setTimeout(30_000, () => {
-          upstreamReq.destroy(new Error('Upstream timeout'));
+        const currentReq = upstreamReq;
+        currentReq.setTimeout(30_000, () => {
+          currentReq.destroy(new Error('Upstream timeout'));
         });
 
         upstreamReq.on('error', (err) => {
@@ -428,18 +483,15 @@ router.get('/stream', validateStream, handleValidationErrors, async (req, res) =
           }
         });
 
-        // Abort if client disconnects
-        req.on('close', () => {
-          console.warn('Client disconnected, aborting upstream request');
-          upstreamReq.destroy();
-        });
-
         upstreamReq.end();
+        };
+
+        requestUpstream(selected.url, 5);
       } catch (e) {
-        console.error('Stream resolve parse error:', e, stderr);
-        return res.status(500).json({ error: 'Processing failed', message: 'Failed to resolve media formats' });
+        console.error('Stream serve error:', e);
+        if (!res.headersSent) res.status(500).json({ error: 'Processing failed', message: 'Failed to resolve media formats' });
       }
-    });
+    }
   } catch (error) {
     console.error('Stream error:', error);
     res.status(500).json({

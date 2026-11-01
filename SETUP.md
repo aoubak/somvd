@@ -123,6 +123,29 @@ The app is built for the `/somvdapp/` path. To host it somewhere else (for examp
 
 ---
 
+### Personal use (one click, your computer and phone)
+For a private install that only you use, double-click `start.bat` (Windows). It builds the app, starts one server in personal mode and opens `http://localhost:3002/somvdapp/`.
+
+Personal mode (`PERSONAL_MODE=true`, set by `start.bat`) changes three things:
+- Any link is accepted and passed to yt-dlp, which supports many more sites than the five listed ones. DRM-protected services (Netflix and similar) still cannot be downloaded.
+- Rate limits are off.
+- Do not expose this server to the internet. Anyone who can reach it can use it.
+
+Phone on the same Wi-Fi
+- The server prints a line like `On your phone (same Wi-Fi): http://192.168.x.x:3002/somvdapp/`. Open that address on the phone. The computer must stay on with `start.bat` running.
+- The first time, Windows Firewall asks about Node.js: allow it on private networks.
+- Add it to the home screen from the browser menu ("Add to Home screen"). On iPhone it opens like an app. On Android, Chrome only offers a full app install over HTTPS, so on plain home Wi-Fi you get a home-screen shortcut that opens in the browser. On the computer itself, Chrome and Edge can install it as an app from the address bar.
+
+Private videos (your own login)
+- Export your cookies for the site (for example with the "Get cookies.txt LOCALLY" browser extension) and save them as `backend/cookies.txt`; the backend picks that file up by itself. Cookies for several sites can go in the same file. To use another location set `YTDLP_COOKIES` in `backend/.env`, or set `YTDLP_COOKIES_FROM_BROWSER=firefox` to read them from a browser.
+- The cookies file is your login: keep it on your own computer and never commit it (`*cookies*.txt` is git-ignored). Export it again when it expires.
+- Facebook stories: yt-dlp cannot read them, so the backend reads the story page itself with your login (`backend/services/facebookStory.js`). Video stories only, one story per link, and only stories your account can see. Facebook can change its pages and break this.
+- Other private content (private videos and reels, Instagram stories) goes through yt-dlp with the same cookies.
+
+When downloads stop working, run `update-ytdlp.bat` and start again; platforms change often.
+
+---
+
 ### 5) How downloads work
 - The frontend asks for video details with `POST /api/video/info` and shows the available qualities (240p to 4K, plus Audio when the platform has a separate audio track).
 - Download fetches `GET /api/video/stream?url=...&quality=...` inside the page, so it can show progress, a Cancel button and readable error messages, then saves the file.

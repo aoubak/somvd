@@ -4,7 +4,10 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const compression = require('compression');
-require('dotenv').config();
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Import routes
 const videoRoutes = require('./routes/video');
@@ -13,9 +16,24 @@ const videoRoutes = require('./routes/video');
 const app = express();
 const PORT = process.env.PORT || 3002;
 
+// PERSONAL_MODE=true: private single-user install (see start.bat). Any site, no rate limits.
+const PERSONAL_MODE = process.env.PERSONAL_MODE === 'true';
+// The built frontend, served from this server when it exists so one address works on every device
+const FRONTEND_DIST = path.join(__dirname, '..', 'dist');
+const FRONTEND_BASE = '/somvdapp';
+const serveFrontend = fs.existsSync(path.join(FRONTEND_DIST, 'index.html'));
+
 // Security middleware
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      // Thumbnails load straight from the video platforms
+      imgSrc: ["'self'", 'data:', 'https:', 'http:'],
+      // The app is also opened over plain http on the home network
+      upgradeInsecureRequests: null
+    }
+  }
 }));
 
 // CORS configuration
@@ -50,9 +68,11 @@ const streamLimiter = rateLimit({
   }
 });
 
-// Apply rate limiting
-app.use(limiter);
-app.use('/api/video/stream', streamLimiter);
+// Apply rate limiting (a personal install has one user, so there is nothing to protect)
+if (!PERSONAL_MODE) {
+  app.use(limiter);
+  app.use('/api/video/stream', streamLimiter);
+}
 
 // Middleware
 app.use(compression());
@@ -72,6 +92,13 @@ app.get('/api/health', (req, res) => {
 
 // API routes
 app.use('/api/video', videoRoutes);
+
+// Built frontend (single-page app: unknown paths under the base return index.html)
+if (serveFrontend) {
+  app.get('/', (req, res) => res.redirect(`${FRONTEND_BASE}/`));
+  app.use(FRONTEND_BASE, express.static(FRONTEND_DIST));
+  app.get(`${FRONTEND_BASE}/*`, (req, res) => res.sendFile(path.join(FRONTEND_DIST, 'index.html')));
+}
 
 // Error handling middleware
 // Express identifies error handlers by their four arguments, so _next must stay
@@ -115,6 +142,18 @@ app.listen(PORT, () => {
   console.log(`🌐 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🎥 Video API: http://localhost:${PORT}/api/video`);
   console.log(`🔒 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  if (serveFrontend) {
+    console.log(`🖥️  App: http://localhost:${PORT}${FRONTEND_BASE}/`);
+    // Addresses other devices on the same Wi-Fi can open
+    for (const addresses of Object.values(os.networkInterfaces())) {
+      for (const address of addresses || []) {
+        if (address.family === 'IPv4' && !address.internal) {
+          console.log(`📱 On your phone (same Wi-Fi): http://${address.address}:${PORT}${FRONTEND_BASE}/`);
+        }
+      }
+    }
+  }
+  if (PERSONAL_MODE) console.log('👤 Personal mode: all sites allowed, rate limits off');
 });
 
 module.exports = app;
